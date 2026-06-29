@@ -930,12 +930,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);max-w
 <!-- ══════ COIN DETAIL ══════ -->
 <div id="coinDetail">
   <div class="cd-header">
-    <div class="cd-logo" id="cdLogo">₿</div>
-    <div class="cd-names">
+    <button class="cd-close" onclick="closeCoinDetail()" style="display:flex;align-items:center;gap:6px;width:auto;padding:0 14px;border-radius:99px;font-size:13px;font-weight:600;color:var(--text)">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back
+    </button>
+    <div class="cd-names" style="text-align:center">
       <div class="cd-cname" id="cdName">Bitcoin</div>
       <div class="cd-csym" id="cdSym">BTC · Rank #1</div>
     </div>
-    <button class="cd-close" onclick="closeCoinDetail()">✕</button>
+    <button class="cd-close" onclick="closeCoinDetail()" style="font-size:18px;font-weight:300">✕</button>
   </div>
 
   <div class="cd-price-hero">
@@ -1727,8 +1730,8 @@ async function openCoinDetail(id) {
   const meta = COIN_META[id] || {ico: coin.symbol.slice(0,2).toUpperCase(), bg:'rgba(255,255,255,.1)'};
   const chg = coin.price_change_percentage_24h || 0;
 
-  document.getElementById('cdLogo').textContent = meta.ico;
-  document.getElementById('cdLogo').style.background = meta.bg;
+  // cdLogo removed from header, skip
+  // document.getElementById('cdLogo').textContent = meta.ico;
   document.getElementById('cdName').textContent = coin.name;
   document.getElementById('cdSym').textContent = `${coin.symbol.toUpperCase()} · Rank #${coin.market_cap_rank||'—'}`;
   document.getElementById('cdPrice').textContent = fmtPrice(coin.current_price);
@@ -1845,12 +1848,8 @@ function setTVInterval(interval, btn) {
 
 function closeCoinDetail() {
   document.getElementById('coinDetail').classList.remove('open');
-  // Clear container — widget iframe destroy ho jaata hai
   document.getElementById('tvWidgetContainer').innerHTML = '';
-  // Reset TradingView global so next open gets fresh widget
-  if (window.TradingView && window.TradingView._widgets) {
-    window.TradingView._widgets = [];
-  }
+  stopLivePriceFeed();
 }
 
 // ══════════════════════════════════════
@@ -1915,10 +1914,49 @@ function stopLivePriceFeed() {
 }
 
 // Also stop feed when coin detail closes
-const _origClose = closeCoinDetail;
-function closeCoinDetail() {
-  _origClose();
-  stopLivePriceFeed();
+// ── Swipe down to close coin detail ──
+(function(){
+  let startY = 0, dragging = false;
+  const el = document.getElementById('coinDetail');
+
+  el.addEventListener('touchstart', e => {
+    if (el.scrollTop === 0) { startY = e.touches[0].clientY; dragging = true; }
+  }, {passive: true});
+
+  el.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 0) {
+      el.style.transform = `translateY(${dy}px)`;
+      el.style.transition = 'none';
+    }
+  }, {passive: true});
+
+  el.addEventListener('touchend', e => {
+    if (!dragging) return;
+    dragging = false;
+    const dy = e.changedTouches[0].clientY - startY;
+    el.style.transition = '';
+    if (dy > 100) {
+      closeCoinDetail();
+    } else {
+      el.style.transform = 'translateY(0)';
+    }
+  }, {passive: true});
+
+  // Android/Browser back button
+  window.addEventListener('popstate', () => {
+    if (document.getElementById('coinDetail').classList.contains('open')) {
+      closeCoinDetail();
+    }
+  });
+})();
+
+// Push state when opening so back button works
+const _origOpen = openCoinDetail;
+async function openCoinDetail(id) {
+  history.pushState({coinDetail: true}, '');
+  await _origOpen(id);
 }
 
 // ── Formatters ──
