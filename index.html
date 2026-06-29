@@ -1279,13 +1279,50 @@ function setNet(btn){
 }
 
 // ── PRICES ──
+// ── Price fetch with multiple fallback sources ──
+async function fetchJSON(url) {
+  const proxies = [
+    u => u,  // direct first
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  ];
+  for (const proxy of proxies) {
+    try {
+      const r = await fetch(proxy(url), {signal: AbortSignal.timeout(6000)});
+      if (r.ok) return await r.json();
+    } catch {}
+  }
+  throw new Error('All sources failed');
+}
+
 async function loadPrices(){
   try{
-    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,binancecoin,tron,tether&vs_currencies=usd&include_24hr_change=true');
-    const d=await r.json();
-    S.prices={eth:d.ethereum?.usd||0,bnb:d.binancecoin?.usd||0,trx:d.tron?.usd||0,usdt:1,
-      eth_chg:d.ethereum?.usd_24h_change||0};
-  }catch{S.prices={eth:0,bnb:0,trx:0,usdt:1,eth_chg:0};}
+    const data = await fetchJSON('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,binancecoin,tron,tether&vs_currencies=usd&include_24hr_change=true');
+    S.prices={
+      eth:data.ethereum?.usd||0,
+      bnb:data.binancecoin?.usd||0,
+      trx:data.tron?.usd||0,
+      usdt:1,
+      eth_chg:data.ethereum?.usd_24h_change||0
+    };
+  } catch {
+    // Fallback: use Binance public REST (no CORS issue)
+    try {
+      const [btc,eth,bnb,trx] = await Promise.all([
+        fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT').then(r=>r.json()),
+        fetch('https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT').then(r=>r.json()),
+        fetch('https://api.binance.com/api/v3/ticker/price?symbol=TRXUSDT').then(r=>r.json()),
+        fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT').then(r=>r.json()),
+      ]);
+      S.prices={
+        eth: parseFloat(btc.price)||0,
+        bnb: parseFloat(eth.price)||0,
+        trx: parseFloat(bnb.price)||0,
+        usdt:1,
+        eth_chg: parseFloat(trx.priceChangePercent)||0
+      };
+    } catch { S.prices={eth:0,bnb:0,trx:0,usdt:1,eth_chg:0}; }
+  }
 }
 
 // ── BALANCES ──
@@ -1699,16 +1736,71 @@ async function loadMarkets() {
   const el = document.getElementById('mktList');
   el.innerHTML = [1,2,3,4,5,6,7,8].map(i =>
     `<div class="skel mkt-skel" style="opacity:${1-i*.1}"></div>`).join('');
+
+  // Try CoinGecko with multiple proxy fallbacks
+  const ids = Object.keys(COIN_META).join(',');
+  const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=20&page=1&sparkline=true&price_change_percentage=1h,24h,7d`;
+
   try {
-    const ids = Object.keys(COIN_META).join(',');
-    const r = await fetch(
-      `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=20&page=1&sparkline=true&price_change_percentage=1h,24h,7d`
-    );
-    allCoins = await r.json();
+    allCoins = await fetchJSON(cgUrl);
+    // cache for offline/retry
+    try { sessionStorage.setItem('tw_markets', JSON.stringify(allCoins)); } catch {}
     applyMarketFilter();
-  } catch(e) {
-    el.innerHTML = `<div class="empty-box"><p>Failed to load prices.<br/>Check connection & try again.</p><button class="btn-primary btn-sm" style="margin-top:12px" onclick="loadMarkets()">Retry</button></div>`;
-  }
+    return;
+  } catch {}
+
+  // Fallback: load from Binance ticker + build coin list manually
+  try {
+    const symbols = ['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT','ADAUSDT',
+      'DOGEUSDT','TRXUSDT','DOTUSDT','MATICUSDT','LINKUSDT','UNIUSDT',
+      'AVAXUSDT','LTCUSDT','ATOMUSDT','XLMUSDT'];
+    const tickers = await Promise.all(
+      symbols.map(s => fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${s}`)
+        .then(r => r.json()).catch(() => null))
+    );
+    const nameMap = {
+      BTCUSDT:'Bitcoin',ETHUSDT:'Ethereum',BNBUSDT:'BNB',SOLUSDT:'Solana',
+      XRPUSDT:'XRP',ADAUSDT:'Cardano',DOGEUSDT:'Dogecoin',TRXUSDT:'TRON',
+      DOTUSDT:'Polkadot',MATICUSDT:'Polygon',LINKUSDT:'Chainlink',UNIUSDT:'Uniswap',
+      AVAXUSDT:'Avalanche',LTCUSDT:'Litecoin',ATOMUSDT:'Cosmos',XLMUSDT:'Stellar'
+    };
+    const cgIdMap = {
+      BTCUSDT:'bitcoin',ETHUSDT:'ethereum',BNBUSDT:'binancecoin',SOLUSDT:'solana',
+      XRPUSDT:'ripple',ADAUSDT:'cardano',DOGEUSDT:'dogecoin',TRXUSDT:'tron',
+      DOTUSDT:'polkadot',MATICUSDT:'matic-network',LINKUSDT:'chainlink',UNIUSDT:'uniswap',
+      AVAXUSDT:'avalanche',LTCUSDT:'litecoin',ATOMUSDT:'cosmos',XLMUSDT:'stellar'
+    };
+    allCoins = tickers.filter(Boolean).map((t, i) => ({
+      id: cgIdMap[symbols[i]],
+      symbol: symbols[i].replace('USDT','').toLowerCase(),
+      name: nameMap[symbols[i]],
+      current_price: parseFloat(t.lastPrice),
+      market_cap: parseFloat(t.quoteVolume) * 10, // rough estimate
+      market_cap_rank: i + 1,
+      total_volume: parseFloat(t.quoteVolume),
+      price_change_percentage_24h: parseFloat(t.priceChangePercent),
+      high_24h: parseFloat(t.highPrice),
+      low_24h: parseFloat(t.lowPrice),
+      ath: parseFloat(t.highPrice) * 1.2,
+      ath_change_percentage: -20,
+      circulating_supply: 0,
+      sparkline_in_7d: { price: [] },
+    }));
+    applyMarketFilter();
+    return;
+  } catch {}
+
+  // Last resort: show cached data
+  try {
+    const cached = sessionStorage.getItem('tw_markets');
+    if (cached) { allCoins = JSON.parse(cached); applyMarketFilter(); return; }
+  } catch {}
+
+  el.innerHTML = `<div class="empty-box">
+    <svg viewBox="0 0 24 24" width="40" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <p>Could not load prices.<br/>Check internet connection.</p>
+    <button class="btn-primary btn-sm" style="margin-top:12px" onclick="loadMarkets()">↺ Retry</button>
+  </div>`;
 }
 
 function applyMarketFilter() {
