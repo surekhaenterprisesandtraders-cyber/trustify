@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Trustify Wallet</title>
+<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Trustify%20Wallet%22,%22short_name%22:%22Trustify%22,%22start_url%22:%22/%22,%22display%22:%22standalone%22,%22background_color%22:%22%230a0e1a%22,%22theme_color%22:%22%230052FF%22}"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230a0e1a'/><path d='M16 3L4 8v8c0 8 5 14 12 16 7-2 12-8 12-16V8z' fill='%230052FF'/><path d='M10 17l4 4 8-9' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>"/>
+<meta name="theme-color" content="#0052FF"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+/* ─── RESET & BASE ─── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0e1a;
+  --bg2:#111827;
+  --bg3:#1a2235;
+  --blue:#0052FF;
+  --blue2:#3b82f6;
+  --cyan:#00d4ff;
+  --green:#22c55e;
+  --red:#ef4444;
+  --gold:#f59e0b;
+  --purple:#8b5cf6;
+  --text:#ffffff;
+  --text2:#94a3b8;
+  --text3:#4b5563;
+  --border:rgba(255,255,255,0.07);
+  --card:rgba(255,255,255,0.04);
+  --card2:rgba(255,255,255,0.08);
+  --r:16px;--r2:12px;--r3:8px;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);max-width:430px;margin:0 auto;position:relative;user-select:none}
+
+/* ─── CANVAS BG ─── */
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.35}
+
+/* ─── SPLASH ─── */
+#splash{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.sp-logo{position:relative;display:flex;align-items:center;justify-content:center}
+.sp-shield{width:90px;height:100px;animation:floatY 3s ease-in-out infinite}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.sp-ring{position:absolute;border-radius:50%;border:1.5px solid rgba(0,212,255,.3);animation:ringOut 2s ease-out infinite}
+.sp-ring:nth-child(2){width:110px;height:110px}
+.sp-ring:nth-child(3){width:150px;height:150px;animation-delay:.4s;opacity:.5}
+@keyframes ringOut{0%{transform:scale(.8);opacity:.8}100%{transform:scale(1.4);opacity:0}}
+.sp-name{font-size:34px;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,#fff 30%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sp-sub{color:var(--text2);font-size:13px;letter-spacing:.5px}
+.sp-bar{width:180px;height:2px;background:var(--bg3);border-radius:99px;overflow:hidden;margin-top:8px}
+.sp-fill{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:99px;animation:fillBar 2s ease-out forwards}
+@keyframes fillBar{to{width:100%}}
+
+/* ─── SCREENS ─── */
+.screen{position:fixed;inset:0;z-index:10;background:var(--bg);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}
+.hidden{display:none!important}
+
+/* ─── ONBOARDING ─── */
+#onboard{background:linear-gradient(160deg,#060c1e 0%,#0a1628 60%,#050d1f 100%)}
+.ob-glow{position:fixed;pointer-events:none}
+.ob-glow.g1{width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(0,82,255,.2) 0%,transparent 70%);top:-150px;left:-100px}
+.ob-glow.g2{width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.12) 0%,transparent 70%);bottom:100px;right:-80px}
+.ob-inner{padding:60px 24px 40px;display:flex;flex-direction:column;gap:32px;min-height:100dvh;position:relative;z-index:1}
+.ob-brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;color:#fff}
+.ob-hero{display:flex;flex-direction:column;gap:14px}
+.ob-hero h1{font-size:44px;font-weight:800;line-height:1.05;letter-spacing:-2px}
+.ob-hero h1 span{background:linear-gradient(135deg,var(--cyan),var(--blue2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ob-hero p{color:var(--text2);font-size:15px;line-height:1.65}
+.ob-pills{display:flex;gap:8px;flex-wrap:wrap}
+.ob-pill{padding:7px 14px;border-radius:99px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px}
+.ob-pill i{font-size:14px}
+.ob-btns{display:flex;flex-direction:column;gap:10px;margin-top:auto}
+.ob-note{text-align:center;font-size:12px;color:var(--text3)}
+
+/* ─── BUTTONS ─── */
+.btn-primary{background:var(--blue);color:#fff;border:none;border-radius:var(--r);padding:17px;font-size:15px;font-weight:700;cursor:pointer;width:100%;transition:.2s;font-family:'Inter',sans-serif;position:relative;overflow:hidden;box-shadow:0 0 30px rgba(0,82,255,.35)}
+.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,transparent 100%)}
+.btn-primary:hover{box-shadow:0 0 50px rgba(0,82,255,.5);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-outline{background:transparent;color:var(--text);border:1.5px solid rgba(255,255,255,.15);border-radius:var(--r);padding:16px;font-size:15px;font-weight:600;cursor:pointer;width:100%;transition:.2s;font-family:'Inter',sans-serif}
+.btn-outline:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
+.btn-sm{padding:11px 20px;font-size:13px;border-radius:var(--r2);width:auto}
+
+/* ─── TOPBAR (screens) ─── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 10px;background:rgba(10,14,26,.9);backdrop-filter:blur(20px);position:sticky;top:0;z-index:40;border-bottom:1px solid var(--border)}
+.tb-back{width:38px;height:38px;border-radius:10px;background:var(--card);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tb-title{font-size:17px;font-weight:700}
+
+/* ─── SEED / IMPORT SCREENS ─── */
+.sc-body{padding:20px 16px;display:flex;flex-direction:column;gap:16px;flex:1}
+.warn-box{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--r2);padding:14px 16px;display:flex;gap:12px}
+.warn-box .wicon{font-size:22px;flex-shrink:0}
+.warn-title{font-weight:700;font-size:14px;color:#f59e0b;margin-bottom:4px}
+.warn-body{font-size:13px;color:#c8943a;line-height:1.6}
+.seed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seed-word{background:var(--card);border:1px solid var(--border);border-radius:var(--r3);padding:10px 6px;text-align:center;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:5px}
+.seed-num{font-size:10px;color:var(--text3);font-variant-numeric:tabular-nums}
+.tab-sw{display:flex;gap:4px;background:var(--card);border-radius:var(--r3);padding:4px}
+.tsw-btn{flex:1;padding:9px;border-radius:6px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;transition:.2s}
+.tsw-btn.active{background:var(--blue);color:#fff}
+.inp{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;color:var(--text);font-size:14px;width:100%;outline:none;font-family:'Inter',sans-serif;transition:.2s;resize:vertical}
+.inp:focus{border-color:rgba(0,82,255,.5);background:rgba(0,82,255,.05)}
+.inp::placeholder{color:var(--text3)}
+.sel-area{min-height:80px;background:var(--card);border:1.5px dashed var(--border);border-radius:var(--r2);padding:12px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.word-pool{display:flex;flex-wrap:wrap;gap:7px}
+.wchip{padding:7px 15px;border-radius:99px;background:var(--card);border:1px solid var(--border);color:var(--text);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:.2s}
+.wchip:hover{border-color:rgba(0,82,255,.5)}
+.wchip.sel{background:rgba(0,82,255,.15);border-color:rgba(0,82,255,.5);color:var(--blue2)}
+.errmsg{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--r3);padding:11px 14px;font-size:13px;color:#fca5a5}
+.sucmsg{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:var(--r3);padding:11px 14px;font-size:13px;color:#86efac}
+
+/* ─── MAIN APP LAYOUT ─── */
+#app{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.app-header{padding:14px 16px 8px;background:rgba(10,14,26,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);position:relative;z-index:40;flex-shrink:0}
+.ah-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ah-brand{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800}
+.ah-actions{display:flex;gap:6px}
+.ah-btn{width:34px;height:34px;border-radius:9px;background:var(--card);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.ah-btn:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+/* network strip */
+.net-strip{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px}
+.net-strip::-webkit-scrollbar{display:none}
+.netbtn{display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:99px;background:var(--card);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.2s;font-family:'Inter',sans-serif}
+.netbtn.active{background:rgba(0,82,255,.2);border-color:rgba(0,82,255,.5);color:#fff}
+.ndot{width:7px;height:7px;border-radius:50%}
+.ndot.eth{background:#627eea}.ndot.bsc{background:#f0b90b}.ndot.tron{background:#ef0027}.ndot.sol{background:#9945ff}.ndot.poly{background:#8247e5}
+
+/* ─── TAB PAGES ─── */
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding-bottom:72px;opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .2s,transform .2s}
+.page.active{opacity:1;pointer-events:auto;transform:translateY(0)}
+
+/* ─── BOTTOM NAV ─── */
+.bnav{position:absolute;bottom:0;left:0;right:0;background:rgba(10,14,26,.96);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,4px);z-index:50;flex-shrink:0}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px 8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:10px;font-weight:600;font-family:'Inter',sans-serif;transition:.15s;position:relative}
+.bnav-item svg{transition:.15s}
+.bnav-item.active{color:var(--blue)}
+.bnav-item.active svg{filter:drop-shadow(0 0 6px var(--blue))}
+.bnav-dot{position:absolute;top:8px;right:calc(50% - 14px);width:6px;height:6px;border-radius:50%;background:var(--red);border:1.5px solid var(--bg)}
+
+/* ═══════════════════════════════
+   HOME PAGE
+   ═══════════════════════════════ */
+/* balance hero */
+.bal-hero{margin:16px;background:linear-gradient(135deg,#0a1a40 0%,#071030 100%);border-radius:24px;padding:28px 24px 22px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.07)}
+.bh-glow{position:absolute;width:250px;height:250px;border-radius:50%;background:radial-gradient(circle,rgba(0,82,255,.25) 0%,transparent 70%);top:-100px;right:-80px;pointer-events:none}
+.bh-glow2{position:absolute;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.12) 0%,transparent 70%);bottom:-60px;left:-40px;pointer-events:none}
+.bh-label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.bh-amount{font-size:48px;font-weight:800;letter-spacing:-2px;line-height:1;background:linear-gradient(135deg,#fff 50%,rgba(255,255,255,.7));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.bh-change{font-size:13px;margin-bottom:18px}
+.bh-change.pos{color:var(--green)}.bh-change.neg{color:var(--red)}
+.bh-addr{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:6px 14px;font-size:12px;color:var(--text2);cursor:pointer;font-family:monospace;transition:.2s}
+.bh-addr:hover{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.3);color:#fff}
+/* sparkline */
+.sparkline{position:absolute;bottom:0;left:0;right:0;height:56px;opacity:.4}
+
+/* quick actions */
+.qa-row{display:flex;justify-content:space-around;padding:8px 16px 4px}
+.qa{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;border-radius:14px;transition:.2s;border:none;background:none;font-family:'Inter',sans-serif;color:var(--text2);font-size:12px;font-weight:600}
+.qa:hover{background:var(--card);color:var(--text)}
+.qa-ic{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+.qa-ic.send{background:linear-gradient(135deg,rgba(0,82,255,.25),rgba(0,82,255,.1));border:1px solid rgba(0,82,255,.3);color:var(--blue2)}
+.qa-ic.recv{background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(34,197,94,.08));border:1px solid rgba(34,197,94,.3);color:var(--green)}
+.qa-ic.buy{background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(245,158,11,.08));border:1px solid rgba(245,158,11,.3);color:var(--gold)}
+.qa-ic.swap{background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(139,92,246,.08));border:1px solid rgba(139,92,246,.3);color:var(--purple)}
+.qa-ic.earn{background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,212,255,.05));border:1px solid rgba(0,212,255,.3);color:var(--cyan)}
+
+/* section headers */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 6px}
+.sec-title{font-size:15px;font-weight:700}
+.sec-link{font-size:13px;color:var(--blue2);cursor:pointer;font-weight:500}
+
+/* assets */
+.asset-list{padding:0 10px;display:flex;flex-direction:column;gap:2px}
+.asset-item{display:flex;align-items:center;gap:14px;padding:12px;border-radius:14px;cursor:pointer;transition:.15s}
+.asset-item:hover{background:var(--card)}
+.asset-ico{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;position:relative}
+.asset-ico img{width:44px;height:44px;border-radius:50%;object-fit:cover}
+.asset-net-badge{position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800}
+.asset-info{flex:1;min-width:0}
+.asset-name{font-size:15px;font-weight:600}
+.asset-bal{font-size:13px;color:var(--text2);margin-top:1px}
+.asset-right{text-align:right;flex-shrink:0}
+.asset-usd{font-size:15px;font-weight:700}
+.asset-chg{font-size:12px;margin-top:1px}
+.asset-chg.pos{color:var(--green)}.asset-chg.neg{color:var(--red)}
+
+/* skeleton */
+.skel{background:linear-gradient(90deg,var(--bg2) 25%,var(--bg3) 50%,var(--bg2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:14px}
+@keyframes shimmer{to{background-position:-200% 0}}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+
+/* ═══════════════════════════════
+   NFT PAGE
+   ═══════════════════════════════ */
+.nft-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 14px}
+.nft-card{background:var(--bg2);border-radius:16px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:.2s}
+.nft-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.15)}
+.nft-img{width:100%;aspect-ratio:1;object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:56px}
+.nft-body{padding:10px 12px}
+.nft-collection{font-size:10px;color:var(--blue2);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.nft-name{font-size:14px;font-weight:700;margin-top:2px}
+.nft-floor{font-size:12px;color:var(--text2);margin-top:4px}
+.nft-floor span{color:var(--text);font-weight:600}
+
+/* ═══════════════════════════════
+   EARN / STAKING PAGE
+   ═══════════════════════════════ */
+.earn-hero{margin:16px;background:linear-gradient(135deg,#0f2040,#071530);border:1px solid rgba(0,212,255,.15);border-radius:20px;padding:22px 20px;text-align:center;position:relative;overflow:hidden}
+.earn-apy{font-size:42px;font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--blue2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.earn-apy-lbl{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.earn-cards{padding:0 14px;display:flex;flex-direction:column;gap:10px}
+.earn-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:.2s}
+.earn-card:hover{border-color:rgba(255,255,255,.15);background:var(--bg3)}
+.earn-ico{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.earn-info{flex:1}
+.earn-name{font-size:15px;font-weight:700}
+.earn-type{font-size:12px;color:var(--text2);margin-top:2px}
+.earn-right{text-align:right}
+.earn-apy2{font-size:16px;font-weight:800;color:var(--green)}
+.earn-lbl2{font-size:11px;color:var(--text2)}
+.tvl-badge{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:99px;padding:3px 10px;font-size:11px;color:var(--green);display:inline-block;margin-top:6px}
+
+/* ═══════════════════════════════
+   DAPP BROWSER PAGE
+   ═══════════════════════════════ */
+.dapp-search{margin:14px 16px;display:flex;align-items:center;gap:10px;background:var(--bg2);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;transition:.2s}
+.dapp-search:focus-within{border-color:rgba(0,82,255,.4)}
+.dapp-search input{background:none;border:none;color:var(--text);font-size:14px;flex:1;outline:none;font-family:'Inter',sans-serif}
+.dapp-search input::placeholder{color:var(--text3)}
+.dapp-cats{display:flex;gap:8px;padding:0 16px 8px;overflow-x:auto}
+.dapp-cats::-webkit-scrollbar{display:none}
+.dcat{padding:7px 16px;border-radius:99px;background:var(--card);border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--text2);font-family:'Inter',sans-serif;transition:.2s}
+.dcat.active{background:rgba(0,82,255,.2);border-color:rgba(0,82,255,.5);color:#fff}
+.dapp-section{padding:6px 16px 10px}
+.dapp-section-title{font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.dapp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.dapp-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:8px 4px;border-radius:12px;transition:.15s}
+.dapp-item:hover{background:var(--card)}
+.dapp-logo{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--bg2);border:1px solid var(--border)}
+.dapp-label{font-size:11px;font-weight:600;text-align:center;color:var(--text2)}
+.dapp-row{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.dapp-banner{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:.15s}
+.dapp-banner:hover{border-color:rgba(255,255,255,.15)}
+.dapp-bico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.dapp-binfo{flex:1}
+.dapp-bname{font-size:14px;font-weight:700}
+.dapp-bdesc{font-size:12px;color:var(--text2);margin-top:2px}
+.dapp-btag{background:rgba(0,82,255,.15);border-radius:99px;padding:3px 10px;font-size:10px;color:var(--blue2);font-weight:700;margin-top:6px;display:inline-block}
+
+/* ═══════════════════════════════
+   SEND SCREEN (full page overlay)
+   ═══════════════════════════════ */
+#sendPage .sc-body{padding:20px 16px;gap:14px}
+.form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block}
+.asset-sel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.2s}
+.asset-sel:hover{border-color:rgba(255,255,255,.2)}
+.as-ico{font-size:24px}.as-info{flex:1}.as-name{font-size:14px;font-weight:700}.as-bal{font-size:12px;color:var(--text2)}
+.inp-wrap{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--r2);padding:14px;transition:.2s;position:relative;display:flex;align-items:center;gap:8px}
+.inp-wrap:focus-within{border-color:rgba(0,82,255,.4);background:rgba(0,82,255,.04)}
+.inp-wrap input{background:none;border:none;color:var(--text);font-size:15px;flex:1;outline:none;font-family:'Inter',sans-serif}
+.inp-wrap input::placeholder{color:var(--text3)}
+.inp-wrap .scan-btn{padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text2);cursor:pointer;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;white-space:nowrap;transition:.2s;flex-shrink:0}
+.inp-wrap .scan-btn:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.amount-big{font-size:28px;font-weight:800;letter-spacing:-1px}
+.max-btn2{background:rgba(0,82,255,.15);border:1px solid rgba(0,82,255,.3);border-radius:6px;color:var(--blue2);font-size:11px;font-weight:800;padding:4px 10px;cursor:pointer;font-family:'Inter',sans-serif;flex-shrink:0}
+.fee-row{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;font-size:13px}
+.fee-lbl{color:var(--text2)}.fee-val{font-weight:600}
+.avail-row{display:flex;justify-content:space-between;align-items:center;padding:0 2px}
+.avail-lbl{font-size:13px;color:var(--text2)}.avail-val{font-size:13px;font-weight:600;color:var(--blue2)}
+
+/* ═══════════════════════════════
+   RECEIVE SCREEN
+   ═══════════════════════════════ */
+#receivePage .sc-body{align-items:center;gap:18px}
+.recv-net-sel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;color:var(--text);font-size:14px;width:100%;outline:none;font-family:'Inter',sans-serif;cursor:pointer}
+.qr-wrap{background:#fff;padding:18px;border-radius:20px;box-shadow:0 0 60px rgba(0,82,255,.2)}
+.recv-addr-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;width:100%;text-align:center;display:flex;flex-direction:column;gap:12px}
+.recv-addr-lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.recv-addr-mono{font-family:monospace;font-size:13px;word-break:break-all;line-height:1.6}
+.recv-warn{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:var(--r3);padding:11px 14px;font-size:12px;color:#c8943a;text-align:center;width:100%}
+
+/* ═══════════════════════════════
+   HISTORY SCREEN
+   ═══════════════════════════════ */
+#historyPage .sc-body{gap:10px}
+.hist-net-sel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;color:var(--text);font-size:14px;width:100%;outline:none;font-family:'Inter',sans-serif;cursor:pointer}
+.tx-list{display:flex;flex-direction:column;gap:4px}
+.tx-item{display:flex;align-items:center;gap:12px;padding:13px 12px;border-radius:14px;cursor:pointer;transition:.15s}
+.tx-item:hover{background:var(--card)}
+.tx-ico{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tx-ico.in{background:rgba(34,197,94,.12);color:var(--green)}
+.tx-ico.out{background:rgba(239,68,68,.12);color:var(--red)}
+.tx-info{flex:1;min-width:0}
+.tx-type{font-size:14px;font-weight:600}
+.tx-addr{font-size:12px;color:var(--text2);margin-top:2px;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-link{font-size:11px;color:var(--blue2);text-decoration:none}
+.tx-right{text-align:right;flex-shrink:0}
+.tx-amt{font-size:14px;font-weight:700;font-family:monospace}
+.tx-amt.in{color:var(--green)}.tx-amt.out{color:var(--red)}
+.tx-time{font-size:11px;color:var(--text3);margin-top:2px}
+.empty-box{text-align:center;padding:50px 20px;color:var(--text2);display:flex;flex-direction:column;align-items:center;gap:14px}
+.empty-box p{font-size:14px;color:var(--text3)}
+
+/* ═══════════════════════════════
+   SETTINGS SHEET
+   ═══════════════════════════════ */
+.overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center}
+.bsheet{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:430px;max-height:85dvh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,16px);border:1px solid var(--border);border-bottom:none}
+.bsh-handle{width:40px;height:4px;border-radius:99px;background:var(--border);margin:12px auto 0}
+.bsh-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border)}
+.bsh-title{font-size:17px;font-weight:800}
+.bsh-close{width:28px;height:28px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px}
+.bsh-body{padding:10px 20px 20px}
+.srow{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:.15s}
+.srow:last-child{border-bottom:none}
+.srow:hover .sr-title{color:var(--blue2)}
+.srow.danger:hover .sr-title{color:var(--red)}
+.sr-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sr-txt{flex:1}.sr-title{font-size:15px;font-weight:600}.sr-sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* ═══════════════════════════════
+   QR SCANNER SHEET
+   ═══════════════════════════════ */
+.scan-view{position:relative;background:#000;overflow:hidden;height:300px}
+#scanVideo{width:100%;height:100%;object-fit:cover}
+.scan-ui{position:absolute;inset:0}
+.scan-dim{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.scan-box{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:220px;height:220px}
+.scan-box::before,.scan-box::after,.sc-bl,.sc-br{content:'';position:absolute;width:30px;height:30px;border-color:var(--cyan);border-style:solid}
+.scan-box::before{top:0;left:0;border-width:2.5px 0 0 2.5px}
+.scan-box::after{top:0;right:0;border-width:2.5px 2.5px 0 0}
+.sc-bl{bottom:0;left:0;border-width:0 0 2.5px 2.5px}
+.sc-br{bottom:0;right:0;border-width:0 2.5px 2.5px 0}
+.scan-line2{position:absolute;left:0;right:0;height:2px;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:scanY 2s ease-in-out infinite;top:0}
+@keyframes scanY{0%,100%{top:0}50%{top:calc(100% - 2px)}}
+.scan-tip2{text-align:center;padding:14px;font-size:13px;color:var(--text2)}
+
+/* ═══════════════════════════════
+   TOAST
+   ═══════════════════════════════ */
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:rgba(26,34,53,.95);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:11px 24px;font-size:13px;font-weight:500;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:500;transition:opacity .3s}
+#toast.hidden{opacity:0;pointer-events:none}
+
+/* ═══════════════════════════════
+   SWAP MODAL
+   ═══════════════════════════════ */
+.swap-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:4px}
+.swap-from-lbl{font-size:11px;color:var(--text2);text-transform:uppercase;font-weight:700;letter-spacing:.5px}
+.swap-inp-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.swap-inp{background:none;border:none;color:var(--text);font-size:26px;font-weight:800;font-family:'Inter',sans-serif;outline:none;flex:1;width:0}
+.swap-asset-btn{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:99px;padding:7px 12px;cursor:pointer;font-size:14px;font-weight:700;flex-shrink:0;transition:.2s}
+.swap-asset-btn:hover{border-color:rgba(255,255,255,.2)}
+.swap-divider{display:flex;justify-content:center;padding:4px 0;position:relative}
+.swap-swap-btn{width:38px;height:38px;border-radius:12px;background:var(--blue);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:.2s}
+.swap-swap-btn:hover{background:var(--blue2);transform:rotate(180deg)}
+.swap-rate{background:var(--card);border-radius:var(--r3);padding:10px 14px;font-size:13px;color:var(--text2);display:flex;justify-content:space-between}
+.swap-rate span{color:var(--text);font-weight:600}
+/* ═══════════════════════════════
+   MARKETS PAGE
+   ═══════════════════════════════ */
+/* search + filter bar */
+.mkt-bar{padding:14px 16px 8px;display:flex;flex-direction:column;gap:10px}
+.mkt-search{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--r2);padding:11px 14px;transition:.2s}
+.mkt-search:focus-within{border-color:rgba(0,82,255,.4)}
+.mkt-search input{background:none;border:none;color:var(--text);font-size:14px;flex:1;outline:none;font-family:'Inter',sans-serif}
+.mkt-search input::placeholder{color:var(--text3)}
+.mkt-filter{display:flex;gap:6px;overflow-x:auto}.mkt-filter::-webkit-scrollbar{display:none}
+.mkt-ftab{padding:7px 16px;border-radius:99px;background:var(--card);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;transition:.2s}
+.mkt-ftab.active{background:rgba(0,82,255,.2);border-color:rgba(0,82,255,.5);color:#fff}
+/* market list */
+.mkt-list{padding:0 10px;display:flex;flex-direction:column;gap:2px}
+.mkt-row{display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:14px;cursor:pointer;transition:.15s;position:relative}
+.mkt-row:hover{background:var(--card)}
+.mkt-rank{font-size:11px;color:var(--text3);width:18px;text-align:center;flex-shrink:0;font-weight:700}
+.mkt-logo{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;font-weight:700;border:1px solid var(--border)}
+.mkt-info{flex:1;min-width:0}
+.mkt-name{font-size:14px;font-weight:700}
+.mkt-sym{font-size:12px;color:var(--text2);margin-top:1px}
+.mkt-mcap{font-size:10px;color:var(--text3);margin-top:2px}
+.mkt-sparkwrap{width:60px;flex-shrink:0}
+.mkt-spark{width:60px;height:28px}
+.mkt-right{text-align:right;flex-shrink:0;min-width:72px}
+.mkt-price{font-size:14px;font-weight:700}
+.mkt-chg{font-size:12px;font-weight:700;margin-top:2px}
+.mkt-chg.pos{color:var(--green)}.mkt-chg.neg{color:var(--red)}
+/* mkt row skeleton */
+.mkt-skel{height:62px;border-radius:14px;margin:0 10px}
+/* sort header */
+.mkt-sort-hdr{display:flex;align-items:center;justify-content:space-between;padding:4px 20px 4px;font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.mkt-sort-btn{cursor:pointer;display:flex;align-items:center;gap:3px;padding:4px 6px;border-radius:6px;transition:.15s}
+.mkt-sort-btn:hover{color:var(--text2);background:var(--card)}
+.mkt-sort-btn.active{color:var(--blue2)}
+
+/* ── COIN DETAIL OVERLAY ── */
+#coinDetail{position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto;transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1)}
+#coinDetail.open{transform:translateY(0)}
+.cd-header{display:flex;align-items:center;gap:12px;padding:16px 16px 10px;background:rgba(10,14,26,.95);backdrop-filter:blur(20px);position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border)}
+.cd-logo{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--border)}
+.cd-names{flex:1}
+.cd-cname{font-size:17px;font-weight:800}
+.cd-csym{font-size:13px;color:var(--text2)}
+.cd-close{width:34px;height:34px;border-radius:10px;background:var(--card);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}
+.cd-price-hero{padding:16px 20px 8px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.cd-price{font-size:36px;font-weight:800;letter-spacing:-1.5px}
+.cd-change{font-size:14px;font-weight:700;padding:4px 10px;border-radius:99px}
+.cd-change.pos{background:rgba(34,197,94,.15);color:var(--green)}
+.cd-change.neg{background:rgba(239,68,68,.15);color:var(--red)}
+
+/* TradingView widget container */
+.tv-chart-wrap{margin:0 16px 14px;border-radius:16px;overflow:hidden;border:1px solid var(--border);height:420px;background:var(--bg2);position:relative}
+.tv-chart-wrap iframe{width:100%;height:100%;border:none;display:block}
+.tv-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--text2);font-size:13px;background:var(--bg2);z-index:2;pointer-events:none;transition:opacity .5s}
+.tv-loading.gone{opacity:0}
+.tv-logo-anim{font-size:32px;animation:floatY 2s ease-in-out infinite}
+
+/* timeframe quick-jump (for TV widget) */
+.tf-row{display:flex;gap:6px;padding:8px 16px 4px;overflow-x:auto}.tf-row::-webkit-scrollbar{display:none}
+.tf-btn{padding:7px 16px;border-radius:99px;background:var(--card);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;transition:.2s;white-space:nowrap}
+.tf-btn.active{background:rgba(0,82,255,.2);border-color:rgba(0,82,255,.5);color:#fff}
+
+/* stats grid */
+.cd-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px}
+.cd-stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}
+.cd-stat-lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.cd-stat-val{font-size:16px;font-weight:700}
+.cd-stat-sub{font-size:12px;color:var(--text3);margin-top:2px}
+
+/* buy/sell strip */
+.cd-actions{display:flex;gap:10px;padding:0 16px 20px;position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding-top:14px}
+.cd-actions .btn-primary{flex:1}
+.btn-sell{background:rgba(239,68,68,.15);border:1.5px solid rgba(239,68,68,.35);color:var(--red);border-radius:var(--r);padding:17px;font-size:15px;font-weight:700;cursor:pointer;flex:1;font-family:'Inter',sans-serif;transition:.2s}
+.btn-sell:hover{background:rgba(239,68,68,.25)}
+.cd-desc{padding:0 16px 16px;font-size:14px;color:var(--text2);line-height:1.7}
+.cd-desc-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<!-- ══════════ SPLASH ══════════ -->
+<div id="splash">
+  <div class="sp-logo">
+    <svg class="sp-shield" viewBox="0 0 80 90" fill="none">
+      <defs>
+        <linearGradient id="sg1" x1="8" y1="4" x2="72" y2="82" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#0052FF"/><stop offset="1" stop-color="#00d4ff"/>
+        </linearGradient>
+        <linearGradient id="sg2" x1="8" y1="4" x2="72" y2="82" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#3b82f6"/><stop offset="1" stop-color="#00d4ff"/>
+        </linearGradient>
+      </defs>
+      <path d="M40 5L9 20V44C9 62 22.5 78 40 84C57.5 78 71 62 71 44V20L40 5Z" fill="url(#sg1)"/>
+      <path d="M40 5L9 20V44C9 62 22.5 78 40 84C57.5 78 71 62 71 44V20L40 5Z" stroke="url(#sg2)" stroke-width="1.5" fill="none"/>
+      <path d="M27 46L36 55L55 35" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="sp-ring"></div><div class="sp-ring"></div>
+  </div>
+  <div class="sp-name">Trustify</div>
+  <div class="sp-sub">SECURE · MULTI-CHAIN · YOUR KEYS</div>
+  <div class="sp-bar"><div class="sp-fill"></div></div>
+</div>
+
+<!-- ══════════ ONBOARDING ══════════ -->
+<div id="onboard" class="screen hidden">
+  <div class="ob-glow g1"></div><div class="ob-glow g2"></div>
+  <div class="ob-inner">
+    <div class="ob-brand">
+      <svg viewBox="0 0 32 36" width="28" fill="none">
+        <path d="M16 2L3 8V18C3 27 8.5 34.5 16 37C23.5 34.5 29 27 29 18V8L16 2Z" fill="#0052FF"/>
+        <path d="M10.5 19L14.5 23L22.5 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Trustify
+    </div>
+    <div class="ob-hero">
+      <h1>The only wallet<br/>you'll ever<br/><span>need.</span></h1>
+      <p>Multi-chain crypto wallet supporting ETH, BSC, TRON and more. Send, receive, stake, and explore DApps — all from one secure place.</p>
+    </div>
+    <div class="ob-pills">
+      <div class="ob-pill"><span>🔐</span> Non-custodial</div>
+      <div class="ob-pill"><span>⛓</span> Multi-chain</div>
+      <div class="ob-pill"><span>⚡</span> DApp Browser</div>
+      <div class="ob-pill"><span>💎</span> NFT Support</div>
+      <div class="ob-pill"><span>📈</span> Earn / Stake</div>
+    </div>
+    <div class="ob-btns">
+      <button class="btn-primary" onclick="gotoCreate()">Create New Wallet</button>
+      <button class="btn-outline" onclick="gotoImport()">I Already Have a Wallet</button>
+    </div>
+    <div class="ob-note">Your private keys never leave your device.</div>
+  </div>
+</div>
+
+<!-- ══════════ CREATE WALLET ══════════ -->
+<div id="createPage" class="screen hidden">
+  <div class="topbar">
+    <button class="tb-back" onclick="go('onboard')">
+      <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <span class="tb-title">Create Wallet</span><div style="width:38px"></div>
+  </div>
+  <div class="sc-body">
+    <div class="warn-box">
+      <div class="wicon">⚠️</div>
+      <div><div class="warn-title">Back up your seed phrase</div><div class="warn-body">Write down all 12 words in order. Store them offline. Anyone with this phrase can access your wallet.</div></div>
+    </div>
+    <div id="seedDisplay" class="seed-grid"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-outline btn-sm" onclick="newMnemonic()">↻ Regenerate</button>
+      <button class="btn-primary btn-sm" onclick="gotoVerify()" style="flex:1">I've Saved It →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ VERIFY SEED ══════════ -->
+<div id="verifyPage" class="screen hidden">
+  <div class="topbar">
+    <button class="tb-back" onclick="go('createPage')">
+      <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <span class="tb-title">Verify Phrase</span><div style="width:38px"></div>
+  </div>
+  <div class="sc-body">
+    <p style="font-size:14px;color:var(--text2);line-height:1.6">Select the words in the correct order to verify your seed phrase:</p>
+    <div id="selArea" class="sel-area"></div>
+    <div id="wordPool" class="word-pool"></div>
+    <div id="verifyErr" class="errmsg hidden"></div>
+    <button class="btn-primary" id="verifyBtn" onclick="doVerify()" disabled>Confirm & Create Wallet</button>
+  </div>
+</div>
+
+<!-- ══════════ IMPORT WALLET ══════════ -->
+<div id="importPage" class="screen hidden">
+  <div class="topbar">
+    <button class="tb-back" onclick="go('onboard')">
+      <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <span class="tb-title">Import Wallet</span><div style="width:38px"></div>
+  </div>
+  <div class="sc-body">
+    <div class="tab-sw">
+      <button class="tsw-btn active" onclick="switchImportTab('seed',this)">Seed Phrase</button>
+      <button class="tsw-btn" onclick="switchImportTab('key',this)">Private Key</button>
+    </div>
+    <div id="imp-seed">
+      <textarea id="seedInp" class="inp" rows="4" placeholder="Enter your 12 or 24 word seed phrase..."></textarea>
+    </div>
+    <div id="imp-key" class="hidden">
+      <input id="keyInp" class="inp" type="text" placeholder="Enter private key (0x...)"/>
+    </div>
+    <div id="importErr" class="errmsg hidden"></div>
+    <button class="btn-primary" onclick="doImport()">Import Wallet →</button>
+  </div>
+</div>
+
+<!-- ══════════ MAIN APP ══════════ -->
+<div id="app" class="hidden">
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="ah-top">
+      <div class="ah-brand">
+        <svg viewBox="0 0 24 27" width="20" fill="none">
+          <path d="M12 1L2 5.5V12C2 18.5 6.5 24 12 26C17.5 24 22 18.5 22 12V5.5L12 1Z" fill="#0052FF"/>
+          <path d="M7.5 13.5L10.5 16.5L17 9.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Trustify
+        <div id="livePill" style="display:flex;align-items:center;gap:4px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:99px;padding:3px 8px;font-size:10px;font-weight:700;color:#22c55e;margin-left:4px">
+          <div id="liveInd" style="width:5px;height:5px;border-radius:50%;background:#22c55e;animation:livePulse 2s ease-in-out infinite"></div>
+          LIVE <span id="refreshCountdown" style="color:var(--text3);font-weight:500">30s</span>
+        </div>
+      </div>
+      <div class="ah-actions">
+        <button class="ah-btn" onclick="openSettings()" title="Settings">
+          <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button class="ah-btn" onclick="lockWallet()" title="Lock">
+          <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="net-strip">
+      <button class="netbtn active" data-net="all" onclick="setNet(this)"><div class="ndot" style="background:linear-gradient(135deg,#627eea,#f0b90b)"></div>All Networks</button>
+      <button class="netbtn" data-net="eth" onclick="setNet(this)"><div class="ndot eth"></div>Ethereum</button>
+      <button class="netbtn" data-net="bsc" onclick="setNet(this)"><div class="ndot bsc"></div>BNB Chain</button>
+      <button class="netbtn" data-net="tron" onclick="setNet(this)"><div class="ndot tron"></div>TRON</button>
+      <button class="netbtn" data-net="poly" onclick="setNet(this)"><div class="ndot poly"></div>Polygon</button>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <div class="pages">
+
+    <!-- HOME -->
+    <div id="pg-home" class="page active">
+      <div class="bal-hero">
+        <div class="bh-glow"></div><div class="bh-glow2"></div>
+        <div class="bh-label">Total Balance</div>
+        <div class="bh-amount" id="totalBal">$0.00</div>
+        <div class="bh-change pos" id="balChange">+$0.00 (0.00%) today</div>
+        <div class="bh-addr" id="addrPill" onclick="copyAddr()">
+          <svg viewBox="0 0 24 24" width="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span id="addrShort">Loading…</span>
+        </div>
+        <svg class="sparkline" viewBox="0 0 430 56" preserveAspectRatio="none">
+          <defs><linearGradient id="spGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0052FF" stop-opacity=".4"/><stop offset="100%" stop-color="#0052FF" stop-opacity="0"/></linearGradient></defs>
+          <path id="sparkPath" d="M0,40 L43,35 L86,38 L129,22 L172,28 L215,14 L258,20 L301,10 L344,16 L387,6 L430,10" fill="none" stroke="#0052FF" stroke-width="2"/>
+          <path id="sparkFill" d="M0,40 L43,35 L86,38 L129,22 L172,28 L215,14 L258,20 L301,10 L344,16 L387,6 L430,10 L430,56 L0,56Z" fill="url(#spGrad)"/>
+        </svg>
+      </div>
+
+      <div class="qa-row">
+        <button class="qa" onclick="openSend()">
+          <div class="qa-ic send"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>Send
+        </button>
+        <button class="qa" onclick="openReceive()">
+          <div class="qa-ic recv"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg></div>Receive
+        </button>
+        <button class="qa" onclick="openSwap()">
+          <div class="qa-ic swap"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>Swap
+        </button>
+        <button class="qa" onclick="switchTab('earn')">
+          <div class="qa-ic earn"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Earn
+        </button>
+        <button class="qa" onclick="switchTab('dapps')">
+          <div class="qa-ic buy"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>DApps
+        </button>
+      </div>
+
+      <div class="sec-hdr">
+        <span class="sec-title">My Assets</span>
+        <span class="sec-link" onclick="refreshAll()">↺ Refresh</span>
+      </div>
+      <div class="asset-list" id="assetList">
+        <div class="skel" style="height:66px;margin:0 2px"></div>
+        <div class="skel" style="height:66px;margin:0 2px;opacity:.7"></div>
+        <div class="skel" style="height:66px;margin:0 2px;opacity:.4"></div>
+      </div>
+
+      <div class="sec-hdr" style="margin-top:8px">
+        <span class="sec-title">Recent Activity</span>
+        <span class="sec-link" onclick="switchTab('history')">See all</span>
+      </div>
+      <div id="recentActivity" class="asset-list" style="padding-bottom:4px">
+        <div class="empty-box" style="padding:20px"><p>No recent activity</p></div>
+      </div>
+    </div>
+
+    <!-- NFTs -->
+    <div id="pg-nft" class="page">
+      <div class="sec-hdr" style="padding-top:16px">
+        <span class="sec-title">My NFTs</span>
+        <span class="sec-link">+ Add</span>
+      </div>
+      <div class="nft-grid" id="nftGrid"></div>
+    </div>
+
+    <!-- EARN -->
+    <div id="pg-earn" class="page">
+      <div class="earn-hero">
+        <div class="bh-glow" style="opacity:.5"></div>
+        <div style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Best Available APY</div>
+        <div class="earn-apy">12.4%</div>
+        <div class="earn-apy-lbl">Annual Percentage Yield</div>
+        <div class="tvl-badge">$2.1B TVL Locked</div>
+      </div>
+      <div class="earn-cards" id="earnList"></div>
+    </div>
+
+    <!-- DAPPS -->
+    <div id="pg-dapps" class="page">
+      <div class="dapp-search">
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="var(--text3)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="Search DApps or enter URL..." id="dappSearch"/>
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="dapp-cats" id="dappCats"></div>
+      <div id="dappContent"></div>
+    </div>
+
+    <!-- MARKETS PAGE -->
+    <div id="pg-markets" class="page">
+      <div class="mkt-bar">
+        <div class="mkt-search">
+          <svg viewBox="0 0 24 24" width="15" fill="none" stroke="var(--text3)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="mktSearch" placeholder="Search coins…" oninput="filterMarkets()"/>
+          <svg viewBox="0 0 24 24" width="14" fill="none" stroke="var(--text3)" stroke-width="2" style="cursor:pointer" onclick="loadMarkets()"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </div>
+        <div class="mkt-filter">
+          <button class="mkt-ftab active" onclick="setMktFilter('all',this)">All</button>
+          <button class="mkt-ftab" onclick="setMktFilter('top',this)">Top 100</button>
+          <button class="mkt-ftab" onclick="setMktFilter('gainers',this)">🔥 Gainers</button>
+          <button class="mkt-ftab" onclick="setMktFilter('losers',this)">📉 Losers</button>
+          <button class="mkt-ftab" onclick="setMktFilter('defi',this)">DeFi</button>
+          <button class="mkt-ftab" onclick="setMktFilter('layer1',this)">Layer 1</button>
+        </div>
+      </div>
+      <div class="mkt-sort-hdr">
+        <span>#  Name</span>
+        <div style="display:flex;gap:16px">
+          <span class="mkt-sort-btn active" onclick="sortMarkets('price',this)">Price ↕</span>
+          <span class="mkt-sort-btn" onclick="sortMarkets('change',this)">24h ↕</span>
+          <span class="mkt-sort-btn" onclick="sortMarkets('mcap',this)">MCap ↕</span>
+        </div>
+      </div>
+      <div class="mkt-list" id="mktList">
+        ${[1,2,3,4,5,6,7,8].map(i=>`<div class="skel mkt-skel" style="opacity:${1-i*.1}"></div>`).join('')}
+      </div>
+    </div>
+
+    <!-- HISTORY (tab) -->
+    <div id="pg-history" class="page">
+      <div style="padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px">
+        <div class="sec-title">Transaction History</div>
+        <select class="hist-net-sel" id="histNet" onchange="loadHistory()">
+          <option value="eth">Ethereum</option>
+          <option value="bsc">BNB Chain</option>
+          <option value="tron">TRON</option>
+        </select>
+        <div class="tx-list" id="txList">
+          <div class="empty-box"><svg viewBox="0 0 24 24" width="40" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg><p>Select network to load history</p></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /pages -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bnav">
+    <button class="bnav-item active" onclick="switchTab('home')">
+      <svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home
+    </button>
+    <button class="bnav-item" onclick="switchTab('markets')">
+      <svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Markets
+    </button>
+    <button class="bnav-item" onclick="switchTab('earn')">
+      <svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Earn
+    </button>
+    <button class="bnav-item" onclick="switchTab('dapps')">
+      <svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>DApps
+    </button>
+    <button class="bnav-item" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>History
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- ══════ SEND PAGE (overlay screen) ══════ -->
+<div id="sendPage" class="screen hidden">
+  <div class="topbar">
+    <button class="tb-back" onclick="closeSend()">
+      <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <span class="tb-title">Send</span><div style="width:38px"></div>
+  </div>
+  <div class="sc-body" id="sendBody">
+    <div>
+      <label class="form-label">Asset</label>
+      <div class="asset-sel" onclick="cycleSendAsset()">
+        <span class="as-ico" id="sendAssetIco">₮</span>
+        <div class="as-info">
+          <div class="as-name" id="sendAssetName">USDT (TRC20)</div>
+          <div class="as-bal" id="sendAssetBal">Balance: —</div>
+        </div>
+        <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+    <div>
+      <label class="form-label">Recipient Address</label>
+      <div class="inp-wrap">
+        <input id="sendTo" type="text" placeholder="0x... or T..." style="font-size:14px"/>
+        <button class="scan-btn" onclick="openScanner('sendTo')">⬛ Scan QR</button>
+      </div>
+    </div>
+    <div>
+      <div class="avail-row">
+        <label class="form-label" style="margin:0">Amount</label>
+        <span class="avail-val" id="sendAvail" style="cursor:pointer" onclick="setMax()">Max</span>
+      </div>
+      <div class="inp-wrap" style="margin-top:6px">
+        <input id="sendAmt" type="number" class="amount-big" placeholder="0.00" oninput="updateUsdPreview()"/>
+        <button class="max-btn2" onclick="setMax()">MAX</button>
+      </div>
+      <div id="usdPreview" style="font-size:13px;color:var(--text2);margin-top:6px;padding:0 2px"></div>
+    </div>
+    <div class="fee-row">
+      <span class="fee-lbl">Network Fee</span>
+      <span class="fee-val" id="feeVal">Estimating…</span>
+    </div>
+    <div id="sendErr" class="errmsg hidden"></div>
+    <div id="sendSuc" class="sucmsg hidden"></div>
+    <button class="btn-primary" id="sendBtn" onclick="doSend()">Send →</button>
+  </div>
+</div>
+
+<!-- ══════ RECEIVE PAGE ══════ -->
+<div id="receivePage" class="screen hidden">
+  <div class="topbar">
+    <button class="tb-back" onclick="closeReceive()">
+      <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <span class="tb-title">Receive</span><div style="width:38px"></div>
+  </div>
+  <div class="sc-body" style="align-items:center;gap:18px">
+    <div style="width:100%">
+      <label class="form-label">Network</label>
+      <select class="recv-net-sel" id="recvNet" onchange="updateQR()">
+        <option value="eth">Ethereum (ETH / ERC20)</option>
+        <option value="bsc">BNB Chain (BNB / BEP20)</option>
+        <option value="tron">TRON (TRX / TRC20)</option>
+      </select>
+    </div>
+    <div class="qr-wrap"><div id="qrEl"></div></div>
+    <div class="recv-addr-box">
+      <div class="recv-addr-lbl">Your Address</div>
+      <div class="recv-addr-mono" id="recvAddr">Loading…</div>
+      <button class="btn-primary" style="margin-top:4px" onclick="copyRecvAddr()">
+        <svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-3px;margin-right:6px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy Address
+      </button>
+    </div>
+    <div class="recv-warn">⚠ Only send assets on the selected network to this address. Wrong network = permanent loss.</div>
+  </div>
+</div>
+
+<!-- ══════ SWAP MODAL ══════ -->
+<div id="swapModal" class="overlay hidden">
+  <div class="bsheet">
+    <div class="bsh-handle"></div>
+    <div class="bsh-hdr">
+      <span class="bsh-title">Swap</span>
+      <button class="bsh-close" onclick="closeSwap()">✕</button>
+    </div>
+    <div style="padding:16px 20px 24px;display:flex;flex-direction:column;gap:8px">
+      <div class="swap-card">
+        <div class="swap-from-lbl">From</div>
+        <div class="swap-inp-row">
+          <input class="swap-inp" id="swapFromAmt" type="number" placeholder="0" oninput="calcSwap()"/>
+          <div class="swap-asset-btn">ETH <svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-top:6px">Balance: <span id="swapFromBal">—</span></div>
+      </div>
+      <div class="swap-divider">
+        <button class="swap-swap-btn">⇅</button>
+      </div>
+      <div class="swap-card">
+        <div class="swap-from-lbl">To</div>
+        <div class="swap-inp-row">
+          <input class="swap-inp" id="swapToAmt" type="number" placeholder="0" readonly/>
+          <div class="swap-asset-btn">USDT <svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-top:6px">Balance: <span id="swapToBal">—</span></div>
+      </div>
+      <div class="swap-rate">
+        <span>Rate</span>
+        <span id="swapRate">1 ETH = —</span>
+      </div>
+      <div class="swap-rate">
+        <span>Slippage</span>
+        <span>0.5%</span>
+      </div>
+      <button class="btn-primary" style="margin-top:8px" onclick="doSwap()">Swap Now</button>
+      <p style="text-align:center;font-size:12px;color:var(--text3)">Swap powered by aggregated DEX liquidity</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ QR SCANNER ══════ -->
+<div id="scanModal" class="overlay hidden">
+  <div class="bsheet">
+    <div class="bsh-handle"></div>
+    <div class="bsh-hdr">
+      <span class="bsh-title">Scan QR Code</span>
+      <button class="bsh-close" onclick="closeScanner()">✕</button>
+    </div>
+    <div class="scan-view">
+      <video id="scanVideo" autoplay playsinline></video>
+      <canvas id="scanCanvas" class="hidden"></canvas>
+      <div class="scan-ui">
+        <div class="scan-dim"></div>
+        <div class="scan-box">
+          <div class="sc-bl"></div><div class="sc-br"></div>
+          <div class="scan-line2"></div>
+        </div>
+      </div>
+    </div>
+    <div class="scan-tip2">Align QR code within the frame</div>
+  </div>
+</div>
+
+<!-- ══════ SETTINGS SHEET ══════ -->
+<div id="settingsModal" class="overlay hidden">
+  <div class="bsheet">
+    <div class="bsh-handle"></div>
+    <div class="bsh-hdr">
+      <span class="bsh-title">Settings</span>
+      <button class="bsh-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="bsh-body">
+      <div class="srow" onclick="exportPK()">
+        <div class="sr-ico" style="background:rgba(0,82,255,.15)">🔑</div>
+        <div class="sr-txt"><div class="sr-title">Export Private Key</div><div class="sr-sub">Copy your private key to clipboard</div></div>
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="srow" onclick="exportSeed()">
+        <div class="sr-ico" style="background:rgba(245,158,11,.12)">📋</div>
+        <div class="sr-txt"><div class="sr-title">Backup Seed Phrase</div><div class="sr-sub">Copy recovery phrase to clipboard</div></div>
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="srow" onclick="openReceive();closeSettings()">
+        <div class="sr-ico" style="background:rgba(34,197,94,.12)">📥</div>
+        <div class="sr-txt"><div class="sr-title">Wallet Address</div><div class="sr-sub">View QR code and copy address</div></div>
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="srow danger" onclick="deleteWallet()">
+        <div class="sr-ico" style="background:rgba(239,68,68,.12)">🗑</div>
+        <div class="sr-txt"><div class="sr-title">Delete Wallet</div><div class="sr-sub">Remove from this device permanently</div></div>
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ COIN DETAIL ══════ -->
+<div id="coinDetail">
+  <div class="cd-header">
+    <div class="cd-logo" id="cdLogo">₿</div>
+    <div class="cd-names">
+      <div class="cd-cname" id="cdName">Bitcoin</div>
+      <div class="cd-csym" id="cdSym">BTC · Rank #1</div>
+    </div>
+    <button class="cd-close" onclick="closeCoinDetail()">✕</button>
+  </div>
+
+  <div class="cd-price-hero">
+    <div>
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+        CURRENT PRICE
+        <span style="display:flex;align-items:center;gap:3px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:99px;padding:2px 7px;font-size:10px;color:#22c55e;font-weight:700">
+          <span style="width:5px;height:5px;border-radius:50%;background:#22c55e;display:inline-block;animation:livePulse 1.5s ease-in-out infinite"></span>
+          LIVE
+        </span>
+      </div>
+      <div class="cd-price" id="cdPrice">$0.00</div>
+    </div>
+    <div class="cd-change" id="cdChange">+0.00%</div>
+  </div>
+
+  <!-- TradingView Timeframe selector -->
+  <div class="tf-row" id="tfRow">
+    <button class="tf-btn" onclick="setTVInterval('1',this)">1m</button>
+    <button class="tf-btn" onclick="setTVInterval('5',this)">5m</button>
+    <button class="tf-btn" onclick="setTVInterval('15',this)">15m</button>
+    <button class="tf-btn" onclick="setTVInterval('60',this)">1H</button>
+    <button class="tf-btn active" onclick="setTVInterval('D',this)">1D</button>
+    <button class="tf-btn" onclick="setTVInterval('W',this)">1W</button>
+    <button class="tf-btn" onclick="setTVInterval('M',this)">1M</button>
+  </div>
+
+  <!-- TradingView Widget -->
+  <div class="tv-chart-wrap" id="tvChartWrap">
+    <div class="tv-loading" id="tvLoading">
+      <div class="tv-logo-anim">📈</div>
+      <div>Loading TradingView Chart…</div>
+    </div>
+    <div id="tvWidgetContainer" style="height:100%"></div>
+  </div>
+
+  <div class="cd-stats" id="cdStats"></div>
+
+  <div class="cd-desc">
+    <div class="cd-desc-title">About</div>
+    <div id="cdDesc">Loading…</div>
+  </div>
+
+  <div class="cd-actions">
+    <button class="btn-sell" onclick="toast('Connect DEX to sell')">Sell</button>
+    <button class="btn-primary" onclick="toast('Connect DEX to buy')">Buy</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="hidden"></div>
+
+<script>
+/* ════════════════════════════════════════════
+   TRUSTIFY WALLET — Core Logic
+   ════════════════════════════════════════════ */
+
+// ── PARTICLE BG ──
+(function(){
+  const c=document.getElementById('bgCanvas'),ctx=c.getContext('2d');
+  let W,H,pts=[];
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight}
+  function Pt(){this.x=Math.random()*W;this.y=Math.random()*H;this.r=Math.random()*1.5+.4;this.vx=(Math.random()-.5)*.25;this.vy=(Math.random()-.5)*.25;this.a=Math.random()*.4+.08;this.ph=Math.random()*Math.PI*2}
+  Pt.prototype.tick=function(){this.x+=this.vx;this.y+=this.vy;this.ph+=.015;if(this.x<0||this.x>W||this.y<0||this.y>H){this.x=Math.random()*W;this.y=Math.random()*H}};
+  Pt.prototype.draw=function(){const a=this.a*(0.7+0.3*Math.sin(this.ph));ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fillStyle=`rgba(0,82,255,${a})`;ctx.fill()};
+  resize();for(let i=0;i<60;i++)pts.push(new Pt());
+  function frame(){ctx.clearRect(0,0,W,H);pts.forEach(p=>{p.tick();p.draw()});for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<90){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.strokeStyle=`rgba(0,82,255,${(1-d/90)*.1})`;ctx.lineWidth=.6;ctx.stroke()}}requestAnimationFrame(frame)}
+  frame();window.addEventListener('resize',resize);
+})();
+
+// ── STATE ──
+const S={wallet:null,balances:{},prices:{},selectedAssetIdx:0,scanTarget:null,scanStream:null,scanRAF:null};
+
+const ASSETS=[
+  {key:'eth_eth', net:'eth', sym:'ETH', name:'Ethereum',  ico:'⟠', bg:'rgba(98,126,234,.2)', dec:18, contract:null},
+  {key:'eth_usdt',net:'eth', sym:'USDT',name:'USDT',      ico:'₮', bg:'rgba(38,168,126,.2)', dec:6,  contract:'0xdAC17F958D2ee523a2206206994597C13D831ec7'},
+  {key:'bsc_bnb', net:'bsc', sym:'BNB', name:'BNB',       ico:'⬡', bg:'rgba(240,185,11,.2)', dec:18, contract:null},
+  {key:'bsc_usdt',net:'bsc', sym:'USDT',name:'USDT BEP20',ico:'₮', bg:'rgba(38,168,126,.2)', dec:18, contract:'0x55d398326f99059fF775485246999027B3197955'},
+  {key:'tron_trx',net:'tron',sym:'TRX', name:'TRON',      ico:'◎', bg:'rgba(239,0,39,.18)',  dec:6,  contract:null},
+  {key:'tron_usdt',net:'tron',sym:'USDT',name:'USDT TRC20',ico:'₮',bg:'rgba(38,168,126,.2)',dec:6,  contract:'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'},
+];
+const RPCS={eth:'https://eth.llamarpc.com',bsc:'https://bsc-dataseed.binance.org'};
+const ERC20_ABI=['function balanceOf(address) view returns (uint256)','function transfer(address,uint256) returns (bool)','function decimals() view returns (uint8)'];
+
+const EARN_DATA=[
+  {name:'ETH Staking',type:'Liquid Staking',ico:'⟠',bg:'rgba(98,126,234,.2)',apy:4.2,tvl:'$12.4B'},
+  {name:'USDT Lending',type:'Lending Pool',ico:'₮',bg:'rgba(38,168,126,.2)',apy:8.7,tvl:'$3.1B'},
+  {name:'BNB Yield',type:'Yield Farming',ico:'⬡',bg:'rgba(240,185,11,.2)',apy:12.4,tvl:'$890M'},
+  {name:'TRX Energy',type:'Energy Rental',ico:'◎',bg:'rgba(239,0,39,.15)',apy:6.5,tvl:'$450M'},
+  {name:'MATIC Pool',type:'Liquidity Pool',ico:'🟣',bg:'rgba(130,71,229,.2)',apy:9.1,tvl:'$670M'},
+];
+const NFT_DATA=[
+  {col:'CryptoPunks',name:'Punk #3821',floor:'68.5 ETH',emoji:'👾',bg:'#1a1a2e'},
+  {col:'Bored Apes',name:'BAYC #7291',floor:'34.2 ETH',emoji:'🦍',bg:'#2e1a1a'},
+  {col:'Azuki',name:'Azuki #4920',floor:'12.8 ETH',emoji:'🌸',bg:'#1a2e1a'},
+  {col:'Doodles',name:'Doodle #2341',floor:'4.1 ETH',emoji:'🎨',bg:'#2e2a1a'},
+];
+const DAPPS={
+  featured:[
+    {name:'Uniswap',ico:'🦄',bg:'rgba(255,0,122,.2)',desc:'Largest DEX by volume',tag:'DeFi'},
+    {name:'OpenSea',ico:'🌊',bg:'rgba(32,129,226,.2)',desc:'Trade, buy & sell NFTs',tag:'NFT'},
+    {name:'Aave',ico:'👻',bg:'rgba(183,55,231,.2)',desc:'Earn yield on your assets',tag:'Lending'},
+    {name:'Compound',ico:'🏦',bg:'rgba(0,212,110,.2)',desc:'DeFi money market protocol',tag:'Lending'},
+  ],
+  top:[
+    {name:'Uniswap',ico:'🦄'},{name:'1inch',ico:'🔮'},{name:'Curve',ico:'〰️'},{name:'dYdX',ico:'📊'},
+    {name:'GMX',ico:'🎮'},{name:'Lido',ico:'💧'},{name:'MakerDAO',ico:'🏛'},{name:'PancakeSwap',ico:'🥞'},
+  ]
+};
+
+// ── NAVIGATION ──
+function go(id){
+  ['onboard','createPage','verifyPage','importPage'].forEach(s=>{
+    const el=document.getElementById(s);if(el)el.classList.add('hidden');
+  });
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ── SPLASH ──
+window.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{
+    document.getElementById('splash').style.display='none';
+    loadFromStorage();
+  },2200);
+  buildEarnList();buildNFTGrid();buildDapps();
+});
+
+function loadFromStorage(){
+  try{
+    const d=localStorage.getItem('tw_w');
+    if(d){S.wallet=JSON.parse(atob(d));showApp();}else{go('onboard');}
+  }catch{go('onboard');}
+}
+
+// ── CREATE ──
+function gotoCreate(){go('createPage');newMnemonic();}
+function newMnemonic(){
+  const w=ethers.Wallet.createRandom();
+  S.pendingMnemonic=w.mnemonic.phrase;
+  renderSeedGrid();
+}
+function renderSeedGrid(){
+  const words=S.pendingMnemonic.split(' ');
+  document.getElementById('seedDisplay').innerHTML=words.map((w,i)=>
+    `<div class="seed-word"><span class="seed-num">${i+1}</span>${w}</div>`).join('');
+}
+
+// ── VERIFY ──
+let selWords=[],shuffled=[];
+function gotoVerify(){
+  go('verifyPage');
+  selWords=[];
+  shuffled=[...S.pendingMnemonic.split(' ')].sort(()=>Math.random()-.5);
+  renderVerify();
+}
+function renderVerify(){
+  document.getElementById('selArea').innerHTML=selWords.map((w,i)=>
+    `<span class="wchip sel" onclick="removeWord(${i})">${w} ×</span>`).join('');
+  const orig=S.pendingMnemonic.split(' ');
+  const remaining=shuffled.filter(w=>{
+    const ci=selWords.filter(x=>x===w).length;
+    const oi=orig.filter(x=>x===w).length;
+    return ci<oi;
+  });
+  document.getElementById('wordPool').innerHTML=remaining.map(w=>
+    `<span class="wchip" onclick="addWord('${w}')">${w}</span>`).join('');
+  document.getElementById('verifyBtn').disabled=selWords.length!==orig.length;
+}
+function addWord(w){selWords.push(w);renderVerify();}
+function removeWord(i){selWords.splice(i,1);renderVerify();}
+function doVerify(){
+  const orig=S.pendingMnemonic.split(' ');
+  if(!orig.every((w,i)=>w===selWords[i])){
+    showEl('verifyErr','Incorrect order. Please try again.');
+    selWords=[];renderVerify();return;
+  }
+  createFromMnemonic(S.pendingMnemonic);
+}
+
+async function createFromMnemonic(phrase){
+  try{
+    const w=ethers.HDNodeWallet.fromPhrase(phrase);
+    S.wallet={mnemonic:phrase,privateKey:w.privateKey,ethAddress:w.address,tronAddress:ethToTron(w.privateKey)};
+    saveWallet();showApp();
+  }catch(e){toast('Error: '+e.message);}
+}
+
+// ── IMPORT ──
+function gotoImport(){go('importPage');}
+let importMode='seed';
+function switchImportTab(mode,btn){
+  importMode=mode;
+  document.querySelectorAll('.tsw-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('imp-seed').classList.toggle('hidden',mode!=='seed');
+  document.getElementById('imp-key').classList.toggle('hidden',mode!=='key');
+}
+async function doImport(){
+  hideEl('importErr');
+  try{
+    let w;
+    if(importMode==='seed'){
+      const p=document.getElementById('seedInp').value.trim();
+      if(!p){showEl('importErr','Enter seed phrase');return;}
+      w=ethers.HDNodeWallet.fromPhrase(p);S.pendingMnemonic=p;
+    }else{
+      let k=document.getElementById('keyInp').value.trim();
+      if(!k.startsWith('0x'))k='0x'+k;
+      w=new ethers.Wallet(k);
+    }
+    S.wallet={mnemonic:S.pendingMnemonic||null,privateKey:w.privateKey,ethAddress:w.address,tronAddress:ethToTron(w.privateKey)};
+    saveWallet();showApp();
+  }catch(e){showEl('importErr','Invalid: '+e.message);}
+}
+
+// ── TRON ADDRESS ──
+function ethToTron(privKey){
+  try{
+    if(typeof TronWeb!=='undefined')return TronWeb.address.fromPrivateKey(privKey.replace('0x',''));
+  }catch{}
+  const hex=new ethers.Wallet(privKey).address.replace('0x','').toLowerCase();
+  return b58check('41'+hex);
+}
+function b58check(hex){
+  const B='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  const bytes=hex.match(/.{2}/g).map(h=>parseInt(h,16));
+  const h1=fnv(bytes),h2=fnv(h1);
+  const full=[...bytes,...h2.slice(0,4)];
+  let n=BigInt('0x'+full.map(b=>b.toString(16).padStart(2,'0')).join(''));
+  let r='';while(n>0n){r=B[Number(n%58n)]+r;n=n/58n;}
+  return r||'T';
+}
+function fnv(d){let h=0x811c9dc5;for(const b of d){h^=b;h=Math.imul(h,0x01000193)>>>0;}return[(h>>>24)&0xff,(h>>>16)&0xff,(h>>>8)&0xff,h&0xff];}
+
+// ── APP ──
+function showApp(){
+  ['onboard','createPage','verifyPage','importPage'].forEach(s=>{
+    const el=document.getElementById(s);if(el)el.classList.add('hidden');
+  });
+  document.getElementById('app').classList.remove('hidden');
+  const short=S.wallet.ethAddress.slice(0,6)+'…'+S.wallet.ethAddress.slice(-4);
+  document.getElementById('addrShort').textContent=short;
+
+  // restore last tab
+  const lastTab=localStorage.getItem('tw_tab')||'home';
+  switchTab(lastTab);
+
+  loadPrices().then(()=>refreshAll());
+  updateQR();
+  updateSendPanel();
+  startAutoRefresh();
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  const pg=document.getElementById('pg-'+tab);
+  if(pg)pg.classList.add('active');
+  const tabs=['home','markets','earn','dapps','history'];
+  const idx=tabs.indexOf(tab);
+  if(idx>=0)document.querySelectorAll('.bnav-item')[idx].classList.add('active');
+  if(tab==='history')loadHistory();
+  if(tab==='markets'&&typeof allCoins!=='undefined'&&!allCoins.length)loadMarkets();
+  try{localStorage.setItem('tw_tab',tab);}catch{}
+}
+
+function setNet(btn){
+  document.querySelectorAll('.netbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── PRICES ──
+async function loadPrices(){
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,binancecoin,tron,tether&vs_currencies=usd&include_24hr_change=true');
+    const d=await r.json();
+    S.prices={eth:d.ethereum?.usd||0,bnb:d.binancecoin?.usd||0,trx:d.tron?.usd||0,usdt:1,
+      eth_chg:d.ethereum?.usd_24h_change||0};
+  }catch{S.prices={eth:0,bnb:0,trx:0,usdt:1,eth_chg:0};}
+}
+
+// ── BALANCES ──
+async function refreshAll(){
+  document.getElementById('assetList').innerHTML=[1,2,3].map(i=>
+    `<div class="skel" style="height:66px;margin:0 2px;opacity:${1-i*.2}"></div>`).join('');
+  const addr=S.wallet.ethAddress, tron=S.wallet.tronAddress;
+  const res=[];
+
+  for(const a of ASSETS){
+    try{
+      let bal=0;
+      if(a.net==='eth'||a.net==='bsc'){
+        const p=new ethers.JsonRpcProvider(RPCS[a.net]);
+        if(!a.contract){
+          bal=parseFloat(ethers.formatEther(await p.getBalance(addr)));
+        }else{
+          const c=new ethers.Contract(a.contract,ERC20_ABI,p);
+          bal=parseFloat(ethers.formatUnits(await c.balanceOf(addr),a.dec));
+        }
+      }else{
+        if(!a.contract){
+          const r=await fetch(`https://api.trongrid.io/v1/accounts/${tron}`);
+          const d=await r.json();
+          bal=(d.data?.[0]?.balance||0)/1e6;
+        }else{
+          const r=await fetch(`https://api.trongrid.io/v1/accounts/${tron}/tokens`);
+          const d=await r.json();
+          const t=d.data?.find(t=>t.tokenId===a.contract);
+          bal=t?parseInt(t.balance)/1e6:0;
+        }
+      }
+      S.balances[a.key]=bal;
+      res.push({...a,bal});
+    }catch{S.balances[a.key]=0;res.push({...a,bal:0});}
+  }
+
+  const usdOf=(a,b)=>{
+    if(a.sym==='USDT')return b;
+    if(a.sym==='ETH')return b*S.prices.eth;
+    if(a.sym==='BNB')return b*S.prices.bnb;
+    if(a.sym==='TRX')return b*S.prices.trx;
+    return 0;
+  };
+  const total=res.reduce((s,a)=>s+usdOf(a,a.bal),0);
+  document.getElementById('totalBal').textContent='$'+total.toFixed(2);
+  const chg=total*(S.prices.eth_chg||0)/100;
+  const chgEl=document.getElementById('balChange');
+  chgEl.textContent=`${chg>=0?'+':''} $${Math.abs(chg).toFixed(2)} (${(S.prices.eth_chg||0).toFixed(2)}%) today`;
+  chgEl.className='bh-change '+(chg>=0?'pos':'neg');
+
+  document.getElementById('assetList').innerHTML=res.map(a=>{
+    const usd=usdOf(a,a.bal);
+    return`<div class="asset-item" onclick="">
+      <div class="asset-ico" style="background:${a.bg}">${a.ico}</div>
+      <div class="asset-info">
+        <div class="asset-name">${a.name}</div>
+        <div class="asset-bal">${fmtN(a.bal)} ${a.sym}</div>
+      </div>
+      <div class="asset-right">
+        <div class="asset-usd">$${usd.toFixed(2)}</div>
+        <div class="asset-chg pos">—</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('assetCount') && (document.getElementById('assetCount').textContent=res.length);
+  updateSendPanel();
+}
+
+// ── SEND ──
+const sendAssets=[
+  {key:'eth_eth',ico:'⟠',name:'ETH (Ethereum)',dec:18,net:'eth',contract:null},
+  {key:'eth_usdt',ico:'₮',name:'USDT (ERC20)',dec:6,net:'eth',contract:'0xdAC17F958D2ee523a2206206994597C13D831ec7'},
+  {key:'bsc_bnb',ico:'⬡',name:'BNB (BSC)',dec:18,net:'bsc',contract:null},
+  {key:'bsc_usdt',ico:'₮',name:'USDT (BEP20)',dec:18,net:'bsc',contract:'0x55d398326f99059fF775485246999027B3197955'},
+  {key:'tron_trx',ico:'◎',name:'TRX (TRON)',dec:6,net:'tron',contract:null},
+  {key:'tron_usdt',ico:'₮',name:'USDT (TRC20)',dec:6,net:'tron',contract:'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'},
+];
+
+function openSend(){document.getElementById('sendPage').classList.remove('hidden');}
+function closeSend(){document.getElementById('sendPage').classList.add('hidden');hideEl('sendErr');hideEl('sendSuc');}
+function updateSendPanel(){
+  const a=sendAssets[S.selectedAssetIdx];
+  document.getElementById('sendAssetIco').textContent=a.ico;
+  document.getElementById('sendAssetName').textContent=a.name;
+  const bal=S.balances[a.key]||0;
+  document.getElementById('sendAssetBal').textContent=`Balance: ${fmtN(bal)} ${a.ico==='₮'?'USDT':a.name.split(' ')[0]}`;
+  estimateFee(a);
+}
+function cycleSendAsset(){S.selectedAssetIdx=(S.selectedAssetIdx+1)%sendAssets.length;updateSendPanel();}
+function setMax(){const a=sendAssets[S.selectedAssetIdx];document.getElementById('sendAmt').value=S.balances[a.key]||0;updateUsdPreview();}
+function updateUsdPreview(){
+  const a=sendAssets[S.selectedAssetIdx];
+  const amt=parseFloat(document.getElementById('sendAmt').value)||0;
+  let usd=0;
+  if(a.ico==='₮')usd=amt;
+  else if(a.ico==='⟠')usd=amt*S.prices.eth;
+  else if(a.ico==='⬡')usd=amt*S.prices.bnb;
+  else if(a.ico==='◎')usd=amt*S.prices.trx;
+  document.getElementById('usdPreview').textContent=usd>0?`≈ $${usd.toFixed(2)} USD`:'';
+}
+async function estimateFee(a){
+  const fv=document.getElementById('feeVal');
+  if(a.net==='tron'){fv.textContent='~1–10 TRX';return;}
+  try{
+    const p=new ethers.JsonRpcProvider(RPCS[a.net]);
+    const fd=await p.getFeeData();
+    const gwei=ethers.formatUnits(fd.gasPrice||0n,'gwei');
+    const sym=a.net==='bsc'?'BNB':'ETH';
+    fv.textContent=`~${(parseFloat(gwei)*21000/1e9).toFixed(6)} ${sym} (${parseFloat(gwei).toFixed(1)} Gwei)`;
+  }catch{fv.textContent='Unable to estimate';}
+}
+async function doSend(){
+  const a=sendAssets[S.selectedAssetIdx];
+  const to=document.getElementById('sendTo').value.trim();
+  const amt=parseFloat(document.getElementById('sendAmt').value);
+  hideEl('sendErr');hideEl('sendSuc');
+  if(!to){showEl('sendErr','Enter recipient address.');return;}
+  if(!amt||amt<=0){showEl('sendErr','Enter a valid amount.');return;}
+  const btn=document.getElementById('sendBtn');
+  btn.disabled=true;btn.textContent='Sending…';
+  try{
+    let txHash;
+    if(a.net==='tron'){
+      showEl('sendErr','TRON send: Use TronLink browser extension for signing TRX/TRC20 transactions.');
+      btn.disabled=false;btn.textContent='Send →';return;
+    }
+    const provider=new ethers.JsonRpcProvider(RPCS[a.net]);
+    const wallet=new ethers.Wallet(S.wallet.privateKey,provider);
+    if(!a.contract){
+      const tx=await wallet.sendTransaction({to,value:ethers.parseEther(String(amt))});
+      txHash=tx.hash;
+    }else{
+      const c=new ethers.Contract(a.contract,ERC20_ABI,wallet);
+      const tx=await c.transfer(to,ethers.parseUnits(String(amt),a.dec));
+      txHash=tx.hash;
+    }
+    const exp=a.net==='bsc'?'https://bscscan.com':'https://etherscan.io';
+    document.getElementById('sendSuc').innerHTML=`✓ Sent! <a href="${exp}/tx/${txHash}" target="_blank" style="color:var(--blue2)">${txHash.slice(0,18)}…</a>`;
+    document.getElementById('sendSuc').classList.remove('hidden');
+    refreshAll();
+  }catch(e){showEl('sendErr','Error: '+(e.reason||e.message));}
+  btn.disabled=false;btn.textContent='Send →';
+}
+
+// ── RECEIVE / QR ──
+function openReceive(){document.getElementById('receivePage').classList.remove('hidden');updateQR();}
+function closeReceive(){document.getElementById('receivePage').classList.add('hidden');}
+function updateQR(){
+  if(!S.wallet)return;
+  const net=document.getElementById('recvNet')?.value||'eth';
+  const addr=net==='tron'?S.wallet.tronAddress:S.wallet.ethAddress;
+  document.getElementById('recvAddr').textContent=addr||'—';
+  const el=document.getElementById('qrEl');
+  el.innerHTML='';
+  try{new QRCode(el,{text:addr,width:180,height:180,colorDark:'#000',colorLight:'#fff'});}catch{}
+}
+function copyRecvAddr(){
+  const addr=document.getElementById('recvAddr').textContent;
+  navigator.clipboard.writeText(addr).then(()=>toast('Address copied!'));
+}
+function copyAddr(){
+  navigator.clipboard.writeText(S.wallet.ethAddress).then(()=>toast('Address copied!'));
+}
+
+// ── SWAP ──
+function openSwap(){document.getElementById('swapModal').classList.remove('hidden');calcSwap();}
+function closeSwap(){document.getElementById('swapModal').classList.add('hidden');}
+function calcSwap(){
+  const amt=parseFloat(document.getElementById('swapFromAmt').value)||0;
+  const rate=S.prices.eth||0;
+  document.getElementById('swapToAmt').value=amt>0?(amt*rate).toFixed(2):'';
+  document.getElementById('swapRate').textContent=`1 ETH = $${rate.toFixed(2)} USDT`;
+  document.getElementById('swapFromBal').textContent=`${fmtN(S.balances.eth_eth||0)} ETH`;
+  document.getElementById('swapToBal').textContent=`${fmtN(S.balances.eth_usdt||0)} USDT`;
+}
+function doSwap(){toast('Swap routes through DEX aggregator. Connect to a DApp for live swaps.');closeSwap();}
+
+// ── HISTORY ──
+async function loadHistory(){
+  const net=document.getElementById('histNet').value;
+  const list=document.getElementById('txList');
+  list.innerHTML='<div class="empty-box"><p>Loading…</p></div>';
+  try{
+    const addr=S.wallet.ethAddress;
+    let txs=[];
+    if(net==='eth'||net==='bsc'){
+      const base=net==='bsc'?'https://api.bscscan.com/api':'https://api.etherscan.io/api';
+      const r=await fetch(`${base}?module=account&action=txlist&address=${addr}&sort=desc&offset=25&page=1`);
+      const d=await r.json();
+      if(d.status==='1'){
+        const exp=net==='bsc'?'https://bscscan.com':'https://etherscan.io';
+        txs=d.result.map(tx=>({
+          isIn:tx.to?.toLowerCase()===addr.toLowerCase(),
+          from:tx.from,to:tx.to||'',
+          value:ethers.formatEther(tx.value),
+          sym:net==='bsc'?'BNB':'ETH',
+          time:new Date(parseInt(tx.timeStamp)*1000),
+          hash:tx.hash,exp
+        }));
+      }
+    }else{
+      const r=await fetch(`https://api.trongrid.io/v1/accounts/${S.wallet.tronAddress}/transactions?limit=25`);
+      const d=await r.json();
+      if(d.data){
+        txs=d.data.map(tx=>({
+          isIn:true,from:S.wallet.tronAddress,to:'…',
+          value:((tx.raw_data?.contract?.[0]?.parameter?.value?.amount||0)/1e6).toFixed(2),
+          sym:'TRX',time:new Date(tx.block_timestamp||0),
+          hash:tx.txID,exp:'https://tronscan.org/#/transaction'
+        }));
+      }
+    }
+    if(!txs.length){list.innerHTML='<div class="empty-box"><p>No transactions found</p></div>';return;}
+    list.innerHTML=txs.map(tx=>`
+      <div class="tx-item">
+        <div class="tx-ico ${tx.isIn?'in':'out'}">${tx.isIn?'↓':'↑'}</div>
+        <div class="tx-info">
+          <div class="tx-type">${tx.isIn?'Received':'Sent'}</div>
+          <div class="tx-addr">${(tx.isIn?tx.from:tx.to).slice(0,20)}…</div>
+          <a class="tx-link" href="${tx.exp}/tx/${tx.hash}" target="_blank">${tx.hash.slice(0,14)}…</a>
+        </div>
+        <div class="tx-right">
+          <div class="tx-amt ${tx.isIn?'in':'out'}">${tx.isIn?'+':'-'}${parseFloat(tx.value).toFixed(4)} ${tx.sym}</div>
+          <div class="tx-time">${tx.time.toLocaleDateString()}</div>
+        </div>
+      </div>`).join('');
+  }catch{list.innerHTML='<div class="empty-box"><p>Failed to load. Try again.</p></div>';}
+}
+
+// ── EARN ──
+function buildEarnList(){
+  document.getElementById('earnList').innerHTML=EARN_DATA.map(e=>`
+    <div class="earn-card" onclick="toast('Connect wallet to start earning ${e.apy}% APY on ${e.name}')">
+      <div class="earn-ico" style="background:${e.bg}">${e.ico}</div>
+      <div class="earn-info">
+        <div class="earn-name">${e.name}</div>
+        <div class="earn-type">${e.type}</div>
+        <div class="tvl-badge" style="font-size:10px;margin-top:4px">TVL ${e.tvl}</div>
+      </div>
+      <div class="earn-right">
+        <div class="earn-apy2">${e.apy}%</div>
+        <div class="earn-lbl2">APY</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── NFTs ──
+function buildNFTGrid(){
+  document.getElementById('nftGrid').innerHTML=NFT_DATA.map(n=>`
+    <div class="nft-card" onclick="toast('${n.name} — Floor: ${n.floor}')">
+      <div class="nft-img" style="background:${n.bg};display:flex;align-items:center;justify-content:center;font-size:60px">${n.emoji}</div>
+      <div class="nft-body">
+        <div class="nft-collection">${n.col}</div>
+        <div class="nft-name">${n.name}</div>
+        <div class="nft-floor">Floor: <span>${n.floor}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+// ── DAPPS ──
+const dappCatList=['All','DeFi','NFT','Lending','Gaming','Bridge'];
+let activeDcat='All';
+function buildDapps(){
+  document.getElementById('dappCats').innerHTML=dappCatList.map(c=>
+    `<button class="dcat${c==='All'?' active':''}" onclick="filterDcat('${c}',this)">${c}</button>`).join('');
+  renderDapps();
+}
+function filterDcat(cat,btn){
+  activeDcat=cat;
+  document.querySelectorAll('.dcat').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDapps();
+}
+function renderDapps(){
+  document.getElementById('dappContent').innerHTML=`
+    <div class="dapp-section">
+      <div class="dapp-section-title">Popular</div>
+      <div class="dapp-grid">${DAPPS.top.map(d=>`
+        <div class="dapp-item" onclick="toast('Opening ${d.name}…')">
+          <div class="dapp-logo">${d.ico}</div>
+          <div class="dapp-label">${d.name}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="dapp-section">
+      <div class="dapp-section-title">Featured</div>
+      <div class="dapp-row">${DAPPS.featured.map(d=>`
+        <div class="dapp-banner" onclick="toast('Opening ${d.name}…')">
+          <div class="dapp-bico" style="background:${d.bg}">${d.ico}</div>
+          <div class="dapp-binfo">
+            <div class="dapp-bname">${d.name}</div>
+            <div class="dapp-bdesc">${d.desc}</div>
+            <div class="dapp-btag">${d.tag}</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ── QR SCANNER ──
+function openScanner(target){
+  S.scanTarget=target;
+  document.getElementById('scanModal').classList.remove('hidden');
+  startCam();
+}
+async function startCam(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    S.scanStream=stream;
+    const v=document.getElementById('scanVideo');
+    v.srcObject=stream;v.play();
+    S.scanRAF=requestAnimationFrame(scanFrame);
+  }catch(e){toast('Camera: '+e.message);closeScanner();}
+}
+function scanFrame(){
+  const v=document.getElementById('scanVideo'),c=document.getElementById('scanCanvas');
+  if(v.readyState===v.HAVE_ENOUGH_DATA){
+    c.width=v.videoWidth;c.height=v.videoHeight;
+    c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+    const img=c.getContext('2d').getImageData(0,0,c.width,c.height);
+    const code=jsQR(img.data,img.width,img.height);
+    if(code){document.getElementById(S.scanTarget).value=code.data;closeScanner();toast('QR scanned!');return;}
+  }
+  S.scanRAF=requestAnimationFrame(scanFrame);
+}
+function closeScanner(){
+  document.getElementById('scanModal').classList.add('hidden');
+  if(S.scanStream){S.scanStream.getTracks().forEach(t=>t.stop());S.scanStream=null;}
+  if(S.scanRAF){cancelAnimationFrame(S.scanRAF);S.scanRAF=null;}
+}
+
+// ── SETTINGS ──
+function openSettings(){document.getElementById('settingsModal').classList.remove('hidden');}
+function closeSettings(){document.getElementById('settingsModal').classList.add('hidden');}
+function exportPK(){if(confirm('⚠ Never share your private key!\n\nCopy to clipboard?'))navigator.clipboard.writeText(S.wallet.privateKey).then(()=>{toast('Private key copied!');closeSettings();});}
+function exportSeed(){if(!S.wallet.mnemonic){toast('Imported by key — no seed phrase.');return;}if(confirm('⚠ Copy seed phrase to clipboard?'))navigator.clipboard.writeText(S.wallet.mnemonic).then(()=>{toast('Seed phrase copied!');closeSettings();});}
+function lockWallet(){if(confirm('Lock and exit wallet?')){S.wallet=null;document.getElementById('app').classList.add('hidden');go('onboard');}}
+function deleteWallet(){if(confirm('⚠ DELETE wallet permanently?\nMake sure you have your seed phrase backed up!'))if(confirm('Are you absolutely sure?')){localStorage.removeItem('tw_w');S.wallet=null;document.getElementById('app').classList.add('hidden');go('onboard');}}
+
+// ── STORAGE ──
+function saveWallet(){localStorage.setItem('tw_w',btoa(JSON.stringify(S.wallet)));}
+
+// ── UTILS ──
+function fmtN(n){if(!n)return'0';if(n>=1)return n.toFixed(4);return n.toFixed(6);}
+function showEl(id,html){const e=document.getElementById(id);if(e){e.innerHTML=html;e.classList.remove('hidden');}}
+function hideEl(id){const e=document.getElementById(id);if(e)e.classList.add('hidden');}
+let toastT;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.remove('hidden');
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.add('hidden'),2800);
+}
+// ══════════════════════════════════════
+// MARKETS — Live Prices + Charts
+// ══════════════════════════════════════
+
+const COIN_META = {
+  bitcoin:       {sym:'BTC', ico:'₿',  bg:'rgba(247,147,26,.2)',  cat:['top','layer1']},
+  ethereum:      {sym:'ETH', ico:'⟠',  bg:'rgba(98,126,234,.2)',  cat:['top','layer1','defi']},
+  tether:        {sym:'USDT',ico:'₮',  bg:'rgba(38,168,126,.2)',  cat:['top']},
+  binancecoin:   {sym:'BNB', ico:'⬡',  bg:'rgba(240,185,11,.2)',  cat:['top','layer1']},
+  solana:        {sym:'SOL', ico:'◎',  bg:'rgba(153,69,255,.2)',  cat:['top','layer1']},
+  'usd-coin':    {sym:'USDC',ico:'💵', bg:'rgba(39,117,202,.2)',  cat:['top']},
+  'ripple':      {sym:'XRP', ico:'✕',  bg:'rgba(0,170,228,.2)',   cat:['top','layer1']},
+  cardano:       {sym:'ADA', ico:'♦',  bg:'rgba(0,51,173,.2)',    cat:['top','layer1']},
+  dogecoin:      {sym:'DOGE',ico:'🐕', bg:'rgba(197,166,71,.2)',  cat:['top']},
+  'tron':        {sym:'TRX', ico:'◑',  bg:'rgba(239,0,39,.2)',    cat:['top','layer1']},
+  polkadot:      {sym:'DOT', ico:'●',  bg:'rgba(230,0,122,.2)',   cat:['top','layer1']},
+  'matic-network':{sym:'MATIC',ico:'🟣',bg:'rgba(130,71,229,.2)', cat:['top','layer1']},
+  'chainlink':   {sym:'LINK',ico:'🔗', bg:'rgba(55,91,210,.2)',   cat:['top','defi']},
+  uniswap:       {sym:'UNI', ico:'🦄', bg:'rgba(255,0,122,.2)',   cat:['top','defi']},
+  avalanche:     {sym:'AVAX',ico:'🔺', bg:'rgba(232,65,66,.2)',   cat:['top','layer1']},
+  'shiba-inu':   {sym:'SHIB',ico:'🐕', bg:'rgba(255,168,0,.2)',   cat:['top']},
+  litecoin:      {sym:'LTC', ico:'Ł',  bg:'rgba(191,191,191,.2)', cat:['top']},
+  cosmos:        {sym:'ATOM',ico:'⚛',  bg:'rgba(46,49,72,.4)',    cat:['top','layer1']},
+  stellar:       {sym:'XLM', ico:'✦',  bg:'rgba(63,154,234,.2)',  cat:['top']},
+  'bitcoin-cash':{sym:'BCH', ico:'₿',  bg:'rgba(139,195,74,.2)',  cat:['top']},
+};
+
+let allCoins = [], filteredCoins = [], mktFilter = 'all', mktSort = 'mcap', mktSortDir = -1;
+let activeCoin = null, currentTVSymbol = 'BINANCE:BTCUSDT', currentTVInterval = 'D';
+
+// ── Load market list ──
+async function loadMarkets() {
+  const el = document.getElementById('mktList');
+  el.innerHTML = [1,2,3,4,5,6,7,8].map(i =>
+    `<div class="skel mkt-skel" style="opacity:${1-i*.1}"></div>`).join('');
+  try {
+    const ids = Object.keys(COIN_META).join(',');
+    const r = await fetch(
+      `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=20&page=1&sparkline=true&price_change_percentage=1h,24h,7d`
+    );
+    allCoins = await r.json();
+    applyMarketFilter();
+  } catch(e) {
+    el.innerHTML = `<div class="empty-box"><p>Failed to load prices.<br/>Check connection & try again.</p><button class="btn-primary btn-sm" style="margin-top:12px" onclick="loadMarkets()">Retry</button></div>`;
+  }
+}
+
+function applyMarketFilter() {
+  let coins = [...allCoins];
+  const q = document.getElementById('mktSearch').value.trim().toLowerCase();
+  if (q) coins = coins.filter(c => c.name.toLowerCase().includes(q) || c.symbol.toLowerCase().includes(q));
+  if (mktFilter === 'gainers') coins = coins.filter(c => c.price_change_percentage_24h > 0).sort((a,b) => b.price_change_percentage_24h - a.price_change_percentage_24h);
+  else if (mktFilter === 'losers') coins = coins.filter(c => c.price_change_percentage_24h < 0).sort((a,b) => a.price_change_percentage_24h - b.price_change_percentage_24h);
+  else if (mktFilter === 'defi') coins = coins.filter(c => COIN_META[c.id]?.cat?.includes('defi'));
+  else if (mktFilter === 'layer1') coins = coins.filter(c => COIN_META[c.id]?.cat?.includes('layer1'));
+  else if (mktFilter === 'top') coins = coins.slice(0, 10);
+  // sort
+  if (mktFilter !== 'gainers' && mktFilter !== 'losers') {
+    if (mktSort === 'price') coins.sort((a,b) => mktSortDir*(b.current_price - a.current_price));
+    else if (mktSort === 'change') coins.sort((a,b) => mktSortDir*(b.price_change_percentage_24h - a.price_change_percentage_24h));
+    else coins.sort((a,b) => mktSortDir*(b.market_cap - a.market_cap));
+  }
+  filteredCoins = coins;
+  renderMarketList(coins);
+}
+
+function renderMarketList(coins) {
+  if (!coins.length) { document.getElementById('mktList').innerHTML = '<div class="empty-box"><p>No coins found</p></div>'; return; }
+  document.getElementById('mktList').innerHTML = coins.map((c, i) => {
+    const meta = COIN_META[c.id] || {ico: c.symbol.slice(0,2).toUpperCase(), bg:'rgba(255,255,255,.1)'};
+    const chg = c.price_change_percentage_24h || 0;
+    const spark = c.sparkline_in_7d?.price || [];
+    const sparkId = 'sp_' + c.id.replace(/-/g,'_');
+    return `<div class="mkt-row" onclick="openCoinDetail('${c.id}')">
+      <div class="mkt-rank">${c.market_cap_rank||i+1}</div>
+      <div class="mkt-logo" style="background:${meta.bg}">${meta.ico}</div>
+      <div class="mkt-info">
+        <div class="mkt-name">${c.name}</div>
+        <div class="mkt-sym">${c.symbol.toUpperCase()}</div>
+        <div class="mkt-mcap">MCap $${fmtMcap(c.market_cap)}</div>
+      </div>
+      <div class="mkt-sparkwrap"><canvas class="mkt-spark" id="${sparkId}" width="60" height="28"></canvas></div>
+      <div class="mkt-right">
+        <div class="mkt-price">${fmtPrice(c.current_price)}</div>
+        <div class="mkt-chg ${chg>=0?'pos':'neg'}">${chg>=0?'+':''}${chg.toFixed(2)}%</div>
+      </div>
+    </div>`;
+  }).join('');
+  // draw mini sparklines
+  coins.forEach(c => {
+    const spark = c.sparkline_in_7d?.price || [];
+    if (!spark.length) return;
+    const id = 'sp_' + c.id.replace(/-/g,'_');
+    const el = document.getElementById(id);
+    if (!el) return;
+    const chg = c.price_change_percentage_24h || 0;
+    const color = chg >= 0 ? '#22c55e' : '#ef4444';
+    drawMiniSpark(el, spark.slice(-24), color);
+  });
+}
+
+function drawMiniSpark(canvas, data, color) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  if (!data.length) return;
+  const mn = Math.min(...data), mx = Math.max(...data), range = mx - mn || 1;
+  const pts = data.map((v, i) => [i/(data.length-1)*W, H - ((v-mn)/range)*(H-4) - 2]);
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0, color.replace(')',',0.3)').replace('rgb','rgba'));
+  grad.addColorStop(1, color.replace(')',',0)').replace('rgb','rgba'));
+  ctx.beginPath();
+  pts.forEach(([x,y],i) => i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+}
+
+function setMktFilter(f, btn) {
+  mktFilter = f;
+  document.querySelectorAll('.mkt-ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyMarketFilter();
+}
+function sortMarkets(field, btn) {
+  if (mktSort === field) mktSortDir *= -1; else { mktSort = field; mktSortDir = -1; }
+  document.querySelectorAll('.mkt-sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyMarketFilter();
+}
+function filterMarkets() { applyMarketFilter(); }
+
+// ── Coin Detail with TradingView ──
+
+// Map CoinGecko IDs → TradingView symbols
+const TV_SYMBOLS = {
+  bitcoin:'BINANCE:BTCUSDT', ethereum:'BINANCE:ETHUSDT',
+  tether:'BINANCE:USDTBUSD', binancecoin:'BINANCE:BNBUSDT',
+  solana:'BINANCE:SOLUSDT', 'usd-coin':'BINANCE:USDCUSDT',
+  ripple:'BINANCE:XRPUSDT', cardano:'BINANCE:ADAUSDT',
+  dogecoin:'BINANCE:DOGEUSDT', tron:'BINANCE:TRXUSDT',
+  polkadot:'BINANCE:DOTUSDT', 'matic-network':'BINANCE:MATICUSDT',
+  chainlink:'BINANCE:LINKUSDT', uniswap:'BINANCE:UNIUSDT',
+  avalanche:'BINANCE:AVAXUSDT', 'shiba-inu':'BINANCE:SHIBUSDT',
+  litecoin:'BINANCE:LTCUSDT', cosmos:'BINANCE:ATOMUSDT',
+  stellar:'BINANCE:XLMUSDT', 'bitcoin-cash':'BINANCE:BCHUSDT',
+};
+
+// variables already declared above (line 1592)
+let tvWidget = null;
+
+async function openCoinDetail(id) {
+  const coin = allCoins.find(c => c.id === id);
+  if (!coin) return;
+  activeCoin = coin;
+
+  const meta = COIN_META[id] || {ico: coin.symbol.slice(0,2).toUpperCase(), bg:'rgba(255,255,255,.1)'};
+  const chg = coin.price_change_percentage_24h || 0;
+
+  document.getElementById('cdLogo').textContent = meta.ico;
+  document.getElementById('cdLogo').style.background = meta.bg;
+  document.getElementById('cdName').textContent = coin.name;
+  document.getElementById('cdSym').textContent = `${coin.symbol.toUpperCase()} · Rank #${coin.market_cap_rank||'—'}`;
+  document.getElementById('cdPrice').textContent = fmtPrice(coin.current_price);
+
+  const chgEl = document.getElementById('cdChange');
+  chgEl.textContent = `${chg>=0?'+':''}${chg.toFixed(2)}% (24h)`;
+  chgEl.className = 'cd-change ' + (chg>=0?'pos':'neg');
+
+  document.getElementById('cdStats').innerHTML = `
+    <div class="cd-stat"><div class="cd-stat-lbl">Market Cap</div><div class="cd-stat-val">$${fmtMcap(coin.market_cap)}</div><div class="cd-stat-sub">Rank #${coin.market_cap_rank||'—'}</div></div>
+    <div class="cd-stat"><div class="cd-stat-lbl">Volume 24h</div><div class="cd-stat-val">$${fmtMcap(coin.total_volume)}</div><div class="cd-stat-sub">Trading volume</div></div>
+    <div class="cd-stat"><div class="cd-stat-lbl">24h High</div><div class="cd-stat-val" style="color:var(--green)">${fmtPrice(coin.high_24h)}</div><div class="cd-stat-sub">Today's high</div></div>
+    <div class="cd-stat"><div class="cd-stat-lbl">24h Low</div><div class="cd-stat-val" style="color:var(--red)">${fmtPrice(coin.low_24h)}</div><div class="cd-stat-sub">Today's low</div></div>
+    <div class="cd-stat"><div class="cd-stat-lbl">All Time High</div><div class="cd-stat-val">${fmtPrice(coin.ath)}</div><div class="cd-stat-sub">${coin.ath_change_percentage?.toFixed(1)}% from ATH</div></div>
+    <div class="cd-stat"><div class="cd-stat-lbl">Circulating Supply</div><div class="cd-stat-val">${fmtMcap(coin.circulating_supply)}</div><div class="cd-stat-sub">${coin.symbol.toUpperCase()}</div></div>
+  `;
+
+  document.getElementById('cdDesc').textContent =
+    `${coin.name} (${coin.symbol.toUpperCase()}) is currently trading at ${fmtPrice(coin.current_price)} with a 24h change of ${chg>=0?'+':''}${chg.toFixed(2)}%. Market cap is $${fmtMcap(coin.market_cap)} with $${fmtMcap(coin.total_volume)} in 24h trading volume.`;
+
+  document.getElementById('coinDetail').classList.add('open');
+
+  // reset interval button
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tf-btn')[4].classList.add('active'); // 1D default
+  currentTVInterval = 'D';
+  currentTVSymbol = TV_SYMBOLS[id] || `BINANCE:${coin.symbol.toUpperCase()}USDT`;
+
+  loadTVWidget(currentTVSymbol, currentTVInterval);
+
+  // Start live price polling for this coin (every 3s via Binance WebSocket)
+  startLivePriceFeed(coin.symbol.toUpperCase());
+}
+
+function loadTVWidget(symbol, interval) {
+  const container = document.getElementById('tvWidgetContainer');
+  const loading   = document.getElementById('tvLoading');
+  container.innerHTML = '';
+  loading.classList.remove('gone');
+
+  /* TradingView official Advanced Chart widget — real-time streaming */
+  const script = document.createElement('script');
+  script.src   = 'https://s3.tradingview.com/tv.js';
+  script.async = true;
+  script.onload = () => {
+    new TradingView.widget({
+      container_id:      'tvWidgetContainer',
+      width:             '100%',
+      height:            420,
+      symbol:            symbol,          // e.g. "BINANCE:BTCUSDT"
+      interval:          interval,        // "1","5","15","60","D","W","M"
+      timezone:          'Asia/Kolkata',
+      theme:             'dark',
+      style:             '1',             // 1 = Candlesticks
+      locale:            'en',
+      toolbar_bg:        '#0a0e1a',
+      enable_publishing: false,
+      hide_top_toolbar:  false,
+      hide_legend:       false,
+      save_image:        false,
+      allow_symbol_change: false,
+      withdateranges:    true,
+      hide_side_toolbar: false,
+      studies:           [],              // add "RSI@tv-basicstudies" etc if needed
+      show_popup_button: false,
+      overrides: {
+        'paneProperties.background':           '#0a0e1a',
+        'paneProperties.backgroundType':       'solid',
+        'paneProperties.vertGridProperties.color':  '#111827',
+        'paneProperties.horzGridProperties.color':  '#111827',
+        'scalesProperties.textColor':          '#94a3b8',
+        'mainSeriesProperties.candleStyle.upColor':        '#22c55e',
+        'mainSeriesProperties.candleStyle.downColor':      '#ef4444',
+        'mainSeriesProperties.candleStyle.borderUpColor':  '#22c55e',
+        'mainSeriesProperties.candleStyle.borderDownColor':'#ef4444',
+        'mainSeriesProperties.candleStyle.wickUpColor':    '#22c55e',
+        'mainSeriesProperties.candleStyle.wickDownColor':  '#ef4444',
+      },
+      loading_screen: { backgroundColor:'#0a0e1a', foregroundColor:'#0052FF' },
+      disabled_features: [
+        'use_localstorage_for_settings',
+        'header_symbol_search',
+        'header_compare',
+      ],
+      enabled_features: [
+        'study_templates',
+        'real_volume_in_the_status_line',
+      ],
+    });
+    loading.classList.add('gone');
+  };
+  script.onerror = () => {
+    loading.textContent = '⚠ Chart load failed. Check internet.';
+  };
+
+  // Remove old tv.js if already loaded to allow fresh widget
+  const old = document.querySelector('script[src*="tv.js"]');
+  if (old) old.remove();
+  if (window.TradingView) {
+    // tv.js already loaded, create widget directly
+    script.onload();
+    return;
+  }
+  document.head.appendChild(script);
+  setTimeout(() => loading.classList.add('gone'), 6000);
+}
+
+function setTVInterval(interval, btn) {
+  currentTVInterval = interval;
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (activeCoin) loadTVWidget(currentTVSymbol, interval);
+}
+
+function closeCoinDetail() {
+  document.getElementById('coinDetail').classList.remove('open');
+  // Clear container — widget iframe destroy ho jaata hai
+  document.getElementById('tvWidgetContainer').innerHTML = '';
+  // Reset TradingView global so next open gets fresh widget
+  if (window.TradingView && window.TradingView._widgets) {
+    window.TradingView._widgets = [];
+  }
+}
+
+// ══════════════════════════════════════
+// BINANCE WEBSOCKET — Real-time price
+// ══════════════════════════════════════
+let liveWS = null;
+let lastLivePrice = 0;
+
+function startLivePriceFeed(symbol) {
+  stopLivePriceFeed();
+  // Binance public WebSocket — no API key needed
+  const wsSymbol = (symbol + 'USDT').toLowerCase();
+  // Exceptions for stablecoins
+  if (symbol === 'USDT' || symbol === 'USDC') return;
+
+  try {
+    liveWS = new WebSocket(`wss://stream.binance.com:9443/ws/${wsSymbol}@miniTicker`);
+
+    liveWS.onmessage = (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        const price = parseFloat(d.c); // current price
+        const open  = parseFloat(d.o); // open price
+        if (!price) return;
+
+        const chgPct = ((price - open) / open) * 100;
+        const priceEl = document.getElementById('cdPrice');
+        const chgEl   = document.getElementById('cdChange');
+        if (!priceEl || !document.getElementById('coinDetail').classList.contains('open')) {
+          stopLivePriceFeed(); return;
+        }
+
+        // Flash animation on price change
+        const prev = lastLivePrice;
+        if (prev && price !== prev) {
+          const up = price > prev;
+          priceEl.style.transition = 'color .25s';
+          priceEl.style.color = up ? '#22c55e' : '#ef4444';
+          setTimeout(() => priceEl.style.color = '', 500);
+        }
+        lastLivePrice = price;
+
+        priceEl.textContent = fmtPrice(price);
+        chgEl.textContent   = `${chgPct>=0?'+':''}${chgPct.toFixed(2)}% (24h)`;
+        chgEl.className     = 'cd-change ' + (chgPct>=0?'pos':'neg');
+      } catch {}
+    };
+
+    liveWS.onerror = () => stopLivePriceFeed();
+    liveWS.onclose = () => { liveWS = null; };
+  } catch(e) {
+    console.warn('WS error:', e);
+  }
+}
+
+function stopLivePriceFeed() {
+  if (liveWS) {
+    liveWS.close();
+    liveWS = null;
+  }
+  lastLivePrice = 0;
+}
+
+// Also stop feed when coin detail closes
+const _origClose = closeCoinDetail;
+function closeCoinDetail() {
+  _origClose();
+  stopLivePriceFeed();
+}
+
+// ── Formatters ──
+function fmtPrice(p) {
+  if (!p && p !== 0) return '—';
+  if (p >= 1000) return '$' + p.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (p >= 1) return '$' + p.toFixed(4);
+  if (p >= 0.01) return '$' + p.toFixed(5);
+  return '$' + p.toFixed(8);
+}
+function fmtMcap(n) {
+  if (!n) return '—';
+  if (n >= 1e12) return (n/1e12).toFixed(2) + 'T';
+  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+
+// ══════════════════════════════════════
+// AUTO REFRESH — Live prices every 30s
+// ══════════════════════════════════════
+let autoRefreshTimer = null;
+let countdownTimer = null;
+let nextRefreshIn = 30;
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  nextRefreshIn = 30;
+  updateRefreshIndicator();
+
+  // countdown tick every second
+  countdownTimer = setInterval(() => {
+    nextRefreshIn--;
+    updateRefreshIndicator();
+    if (nextRefreshIn <= 0) nextRefreshIn = 30;
+  }, 1000);
+
+  // actual data refresh every 30s
+  autoRefreshTimer = setInterval(async () => {
+    nextRefreshIn = 30;
+    await loadPrices();
+    // refresh balance display (prices only, no blockchain calls to save quota)
+    updatePriceDisplayOnly();
+    // if markets tab open, refresh market list
+    const mktPg = document.getElementById('pg-markets');
+    if (mktPg && mktPg.classList.contains('active')) {
+      await loadMarkets();
+    }
+    // flash the indicator green briefly
+    const ind = document.getElementById('liveInd');
+    if (ind) { ind.style.background = '#22c55e'; setTimeout(() => ind.style.background = '', 600); }
+  }, 30000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  if (countdownTimer)   { clearInterval(countdownTimer);   countdownTimer   = null; }
+}
+
+function updateRefreshIndicator() {
+  const el = document.getElementById('refreshCountdown');
+  if (el) el.textContent = nextRefreshIn + 's';
+}
+
+function updatePriceDisplayOnly() {
+  // Re-render asset USD values using new prices without re-fetching blockchain
+  const ASSETS_LOCAL = [
+    {key:'eth_eth', sym:'ETH'},{key:'eth_usdt',sym:'USDT'},
+    {key:'bsc_bnb', sym:'BNB'},{key:'bsc_usdt',sym:'USDT'},
+    {key:'tron_trx',sym:'TRX'},{key:'tron_usdt',sym:'USDT'},
+  ];
+  const usdOf = (sym, bal) => {
+    if(sym==='USDT') return bal;
+    if(sym==='ETH')  return bal * S.prices.eth;
+    if(sym==='BNB')  return bal * S.prices.bnb;
+    if(sym==='TRX')  return bal * S.prices.trx;
+    return 0;
+  };
+  let total = 0;
+  ASSETS_LOCAL.forEach(a => {
+    const bal = S.balances[a.key] || 0;
+    total += usdOf(a.sym, bal);
+  });
+  const balEl = document.getElementById('totalBal');
+  if (balEl) {
+    balEl.textContent = '$' + total.toFixed(2);
+    balEl.style.transition = 'color .4s';
+    balEl.style.color = '#00d4ff';
+    setTimeout(() => balEl.style.color = '', 600);
+  }
+}
+
+</script>
+</body>
+</html>
