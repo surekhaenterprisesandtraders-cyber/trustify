@@ -33,6 +33,58 @@
   --card2:rgba(255,255,255,0.08);
   --r:16px;--r2:12px;--r3:8px;
 }
+
+/* ── LIGHT MODE ── */
+body.light{
+  --bg:#f0f4ff;
+  --bg2:#ffffff;
+  --bg3:#e8eef8;
+  --text:#0a0e1a;
+  --text2:#4b5880;
+  --text3:#8896b3;
+  --border:rgba(0,0,0,0.08);
+  --card:rgba(0,0,0,0.04);
+  --card2:rgba(0,0,0,0.07);
+}
+body.light #bgCanvas{opacity:.08}
+body.light .app-header{background:rgba(240,244,255,.95)}
+body.light .bnav{background:rgba(240,244,255,.96)}
+body.light .bal-hero{background:linear-gradient(135deg,#1a3a8f 0%,#0a1f6e 100%)}
+body.light .bal-hero .bh-amount{background:linear-gradient(135deg,#fff 50%,rgba(255,255,255,.8));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+body.light .bal-hero .bh-label,
+body.light .bal-hero .bh-change,
+body.light .bal-hero .bh-addr{color:rgba(255,255,255,.8)!important}
+body.light .bal-hero .bh-addr{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2)}
+body.light .earn-hero{background:linear-gradient(135deg,#1a3a8f,#0a1f6e)}
+body.light .ob-hero h1{color:#0a0e1a}
+body.light .setup-content{background:transparent}
+body.light #onboard{background:linear-gradient(160deg,#e8eeff 0%,#f0f4ff 60%,#e4eeff 100%)}
+body.light .ob-glow.g1{background:radial-gradient(circle,rgba(0,82,255,.12) 0%,transparent 70%)}
+body.light .ob-glow.g2{background:radial-gradient(circle,rgba(0,180,255,.08) 0%,transparent 70%)}
+body.light .bsheet{background:#ffffff}
+body.light .mkt-search{background:#ffffff}
+body.light #coinDetail{background:#f0f4ff}
+body.light .cd-header{background:rgba(240,244,255,.95)}
+body.light .tv-chart-wrap{border-color:rgba(0,0,0,.1)}
+body.light .asset-item:hover{background:rgba(0,0,0,.04)}
+body.light .mkt-row:hover{background:rgba(0,0,0,.04)}
+body.light .netbtn{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08);color:var(--text2)}
+body.light .netbtn.active{background:rgba(0,82,255,.12);border-color:rgba(0,82,255,.3)}
+body.light .screen{background:#f0f4ff}
+body.light .inp{background:#ffffff;border-color:rgba(0,0,0,.12)}
+body.light .glass-card,.body.light .glass-select{background:#ffffff}
+body.light .warn-box{background:rgba(245,158,11,.06)}
+body.light .seed-word{background:#ffffff;border-color:rgba(0,0,0,.1)}
+body.light .sel-area{background:#ffffff;border-color:rgba(0,0,0,.12)}
+body.light .wchip{background:#ffffff;border-color:rgba(0,0,0,.1)}
+body.light .cd-stat{background:#ffffff}
+body.light .earn-card{background:#ffffff}
+body.light .nft-card{background:#ffffff}
+body.light .dapp-banner,.body.light .dapp-logo{background:#ffffff}
+body.light .swap-card{background:#ffffff}
+body.light .fee-row{background:#ffffff}
+body.light .asset-sel{background:#ffffff}
+body.light .toast{background:rgba(255,255,255,.96);color:#0a0e1a;border-color:rgba(0,82,255,.2)}
 html,body{height:100%;overflow:hidden}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);max-width:430px;margin:0 auto;position:relative;user-select:none}
 
@@ -903,6 +955,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);max-w
       <button class="bsh-close" onclick="closeSettings()">✕</button>
     </div>
     <div class="bsh-body">
+      <div class="srow" onclick="toggleTheme()">
+        <div class="sr-ico" style="background:rgba(139,92,246,.15)" id="themeIco">🌙</div>
+        <div class="sr-txt">
+          <div class="sr-title" id="themeTitle">Switch to Light Mode</div>
+          <div class="sr-sub" id="themeSub">Currently: Dark Mode</div>
+        </div>
+        <div id="themeToggle" style="width:44px;height:24px;border-radius:99px;background:var(--text3);position:relative;transition:.3s;flex-shrink:0">
+          <div id="themeKnob" style="position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.3s"></div>
+        </div>
+      </div>
       <div class="srow" onclick="exportPK()">
         <div class="sr-ico" style="background:rgba(0,82,255,.15)">🔑</div>
         <div class="sr-txt"><div class="sr-title">Export Private Key</div><div class="sr-sub">Copy your private key to clipboard</div></div>
@@ -1059,6 +1121,12 @@ function go(id){
 
 // ── SPLASH ──
 window.addEventListener('DOMContentLoaded',()=>{
+  // restore saved theme
+  try {
+    const savedTheme = localStorage.getItem('tw_theme') || 'dark';
+    applyTheme(savedTheme);
+  } catch {}
+
   setTimeout(()=>{
     document.getElementById('splash').style.display='none';
     loadFromStorage();
@@ -1551,7 +1619,32 @@ function closeScanner(){
 }
 
 // ── SETTINGS ──
-function openSettings(){document.getElementById('settingsModal').classList.remove('hidden');}
+// ── THEME ──
+function applyTheme(mode) {
+  const isLight = mode === 'light';
+  document.body.classList.toggle('light', isLight);
+  const ico   = document.getElementById('themeIco');
+  const title = document.getElementById('themeTitle');
+  const sub   = document.getElementById('themeSub');
+  const knob  = document.getElementById('themeKnob');
+  const track = document.getElementById('themeToggle');
+  if (ico)   ico.textContent   = isLight ? '☀️' : '🌙';
+  if (title) title.textContent = isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode';
+  if (sub)   sub.textContent   = `Currently: ${isLight ? 'Light' : 'Dark'} Mode`;
+  if (knob)  knob.style.left   = isLight ? '23px' : '3px';
+  if (track) track.style.background = isLight ? '#0052FF' : 'var(--text3)';
+  try { localStorage.setItem('tw_theme', mode); } catch {}
+}
+function toggleTheme() {
+  const isLight = document.body.classList.contains('light');
+  applyTheme(isLight ? 'dark' : 'light');
+}
+
+function openSettings(){
+  document.getElementById('settingsModal').classList.remove('hidden');
+  // sync toggle state on open
+  applyTheme(document.body.classList.contains('light') ? 'light' : 'dark');
+}
 function closeSettings(){document.getElementById('settingsModal').classList.add('hidden');}
 function exportPK(){if(confirm('⚠ Never share your private key!\n\nCopy to clipboard?'))navigator.clipboard.writeText(S.wallet.privateKey).then(()=>{toast('Private key copied!');closeSettings();});}
 function exportSeed(){if(!S.wallet.mnemonic){toast('Imported by key — no seed phrase.');return;}if(confirm('⚠ Copy seed phrase to clipboard?'))navigator.clipboard.writeText(S.wallet.mnemonic).then(()=>{toast('Seed phrase copied!');closeSettings();});}
