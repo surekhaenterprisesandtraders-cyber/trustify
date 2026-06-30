@@ -644,7 +644,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);max-w
   <!-- HEADER -->
   <div class="app-header">
     <div class="ah-top">
-      <div class="ah-brand">
+      <div class="ah-brand" onclick="goHome()" style="cursor:pointer">
         <svg viewBox="0 0 24 27" width="20" fill="none">
           <path d="M12 1L2 5.5V12C2 18.5 6.5 24 12 26C17.5 24 22 18.5 22 12V5.5L12 1Z" fill="#0052FF"/>
           <path d="M7.5 13.5L10.5 16.5L17 9.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1407,6 +1407,17 @@ function switchTab(tab){
   if(tab==='history')loadHistory();
   if(tab==='markets'&&typeof allCoins!=='undefined'&&!allCoins.length)loadMarkets();
   try{localStorage.setItem('tw_tab',tab);}catch{}
+}
+
+// Tapping the Trustify logo/name always takes you back to Home,
+// closing any open chart, modal, or sheet first.
+function goHome(){
+  if(document.getElementById('coinDetail')?.classList.contains('open')) closeCoinDetail();
+  document.querySelectorAll('.overlay').forEach(o=>o.classList.add('hidden'));
+  document.querySelectorAll('.screen').forEach(s=>{
+    if(s.id!=='app') s.classList.add('hidden');
+  });
+  switchTab('home');
 }
 
 function setNet(btn){
