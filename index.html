@@ -2086,6 +2086,8 @@ async function openCoinDetail(id) {
   if (!coin) return;
   activeCoin = coin;
 
+  history.pushState({coinDetail: true}, '');
+
   const meta = COIN_META[id] || {ico: coin.symbol.slice(0,2).toUpperCase(), bg:'rgba(255,255,255,.1)'};
   const chg = coin.price_change_percentage_24h || 0;
 
@@ -2311,12 +2313,8 @@ function stopLivePriceFeed() {
   });
 })();
 
-// Push state when opening so back button works
-const _origOpen = openCoinDetail;
-async function openCoinDetail(id) {
-  history.pushState({coinDetail: true}, '');
-  await _origOpen(id);
-}
+// Note: history.pushState for back-button support is now handled
+// directly inside openCoinDetail() above.
 
 // ── Formatters ──
 function fmtPrice(p) {
